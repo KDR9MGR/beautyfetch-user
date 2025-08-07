@@ -7,9 +7,11 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Bell, Lock, Globe, Trash2, Camera } from 'lucide-react';
+import { User, Bell, Lock, Globe, Trash2, Camera, LogOut } from 'lucide-react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileSettingsProps {
   user: SupabaseUser;
@@ -17,6 +19,8 @@ interface ProfileSettingsProps {
 }
 
 export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, profile }) => {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: profile?.first_name || '',
     lastName: profile?.last_name || '',
@@ -63,6 +67,16 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, profile 
   const handleAvatarUpload = () => {
     // In a real app, this would handle file upload
     toast.success('Avatar upload feature coming soon');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success('Successfully logged out');
+      navigate('/');
+    } catch (error) {
+      toast.error('Failed to logout');
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -286,6 +300,19 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, profile 
             </div>
             <Button variant="outline">
               Enable 2FA
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="font-medium">Sign Out</Label>
+              <p className="text-sm text-gray-500">Sign out of your account on this device</p>
+            </div>
+            <Button variant="outline" onClick={handleLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
           </div>
         </CardContent>
