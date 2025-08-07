@@ -20,14 +20,22 @@ interface StoreHours {
   is_closed: boolean;
 }
 
+interface StoreAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+}
+
 interface StoreWithDetails {
   id: string;
   name: string;
   slug: string;
-  description: string;
-  address: string | any;
-  phone: string;
-  email: string;
+  description: string | null;
+  address: any; // Can be string, object, or null from database
+  phone: string | null;
+  email: string | null;
   status: string;
   commission_rate: number;
   created_at: string;
@@ -321,7 +329,7 @@ export const AdminStores = () => {
       name: store.name,
       slug: store.slug,
       description: store.description || "",
-      address: store.address || "",
+      address: formatAddress(store.address),
       phone: store.phone || "",
       email: store.email || "",
       status: store.status as any,
@@ -334,6 +342,23 @@ export const AdminStores = () => {
   const openDetailsDialog = (store: StoreWithDetails) => {
     setSelectedStore(store);
     setDetailsDialogOpen(true);
+  };
+
+  const formatAddress = (address: any): string => {
+    if (!address) return 'No address provided';
+    if (typeof address === 'string') return address;
+    
+    // Handle object address format
+    if (typeof address === 'object') {
+      const parts = [];
+      if (address.street) parts.push(address.street);
+      if (address.city) parts.push(address.city);
+      if (address.state) parts.push(address.state);
+      if (address.zip) parts.push(address.zip);
+      return parts.length > 0 ? parts.join(', ') : 'No address provided';
+    }
+    
+    return 'No address provided';
   };
 
   const getStatusColor = (status: string) => {
@@ -350,8 +375,9 @@ export const AdminStores = () => {
   };
 
   const filteredStores = stores.filter(store => {
+    const addressStr = formatAddress(store.address);
     const matchesSearch = store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         store.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         addressStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          store.owner_details.name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || store.status === statusFilter;
@@ -614,7 +640,7 @@ export const AdminStores = () => {
                     <CardContent className="space-y-3">
                       <div>
                         <Label className="text-sm font-medium">Address</Label>
-                        <p className="text-sm text-gray-600">{selectedStore.address}</p>
+                        <p className="text-sm text-gray-600">{formatAddress(selectedStore.address)}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium">Contact</Label>
@@ -851,7 +877,7 @@ export const AdminStores = () => {
                   <TableCell className="font-medium">
                     <div>
                       <p>{store.name}</p>
-                      <p className="text-sm text-gray-500">{store.address}</p>
+                      <p className="text-sm text-gray-500">{formatAddress(store.address)}</p>
                     </div>
                   </TableCell>
                   <TableCell>
