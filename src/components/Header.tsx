@@ -225,7 +225,7 @@ const Header = () => {
                 ) : (
                   <>
                     <div className="flex items-center gap-2">
-                      <Link to="/login">
+                      <Link to="/auth">
                         <Button variant="outline" size="sm">
                           <User className="h-4 w-4 mr-2" />
                           Sign In
