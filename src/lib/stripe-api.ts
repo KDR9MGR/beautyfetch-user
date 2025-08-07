@@ -1,4 +1,4 @@
-import { STRIPE_CONFIG } from './stripe';
+import { supabase } from '@/integrations/supabase/client';
 
 // Interface for payment intent creation
 interface CreatePaymentIntentParams {
@@ -8,8 +8,7 @@ interface CreatePaymentIntentParams {
   metadata?: Record<string, string>;
 }
 
-// Client-side payment intent creation (for demo purposes)
-// Note: In production, this should be done on your backend for security
+// Secure payment intent creation using Supabase edge function
 export const createPaymentIntent = async ({
   amount,
   currency = 'usd',
@@ -19,63 +18,39 @@ export const createPaymentIntent = async ({
   try {
     console.log('Creating payment intent for amount:', amount);
     
-    // Warning: This exposes the secret key on the frontend
-    // In production, move this to your backend API
-    const response = await fetch('https://api.stripe.com/v1/payment_intents', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${STRIPE_CONFIG.secretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        amount: amount.toString(),
-        currency: currency,
-        receipt_email: customerEmail || '',
-        'metadata[orderNumber]': metadata.orderNumber || '',
-        'metadata[customerEmail]': customerEmail || '',
-        'automatic_payment_methods[enabled]': 'true',
-        'automatic_payment_methods[allow_redirects]': 'never',
-      }),
+    // Call secure Supabase edge function instead of exposing secret key
+    const { data, error } = await supabase.functions.invoke('stripe-payment', {
+      body: {
+        amount,
+        currency,
+        customerEmail,
+        metadata
+      }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to create payment intent');
+    if (error) {
+      console.error('Supabase function error:', error);
+      throw new Error(error.message || 'Failed to create payment intent');
     }
 
-    const paymentIntent = await response.json();
-    console.log('Payment intent created:', paymentIntent.id);
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
+    console.log('Payment intent created:', data.paymentIntentId);
     
-    return paymentIntent;
+    return {
+      client_secret: data.clientSecret,
+      id: data.paymentIntentId
+    };
   } catch (error) {
     console.error('Error creating payment intent:', error);
     throw error;
   }
 };
 
-// Function to retrieve payment intent
-export const retrievePaymentIntent = async (paymentIntentId: string) => {
-  try {
-    const response = await fetch(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${STRIPE_CONFIG.secretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to retrieve payment intent');
-    }
-
-    const paymentIntent = await response.json();
-    return paymentIntent;
-  } catch (error) {
-    console.error('Error retrieving payment intent:', error);
-    throw error;
-  }
-};
+// Function to retrieve payment intent (removed - not secure to expose secret key)
+// Payment intent status should be handled via webhooks or server-side validation
 
 // Payment method types supported
 export const SUPPORTED_PAYMENT_METHODS = [

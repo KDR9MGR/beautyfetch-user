@@ -66,11 +66,8 @@ export const EnhancedPaymentForm: React.FC<EnhancedPaymentFormProps> = ({
         
         setClientSecret(paymentIntent.client_secret);
         
-        // Extract available payment methods
-        const availableMethods = paymentIntent.automatic_payment_methods?.enabled 
-          ? ['card', 'link', 'apple_pay', 'google_pay']
-          : ['card'];
-        setPaymentMethods(availableMethods);
+        // Set default available payment methods (automatic_payment_methods is handled server-side)
+        setPaymentMethods(['card', 'link', 'apple_pay', 'google_pay']);
         
         console.log('Payment intent initialized with client secret');
       } catch (err: any) {
