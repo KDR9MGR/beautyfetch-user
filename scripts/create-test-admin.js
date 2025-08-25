@@ -10,7 +10,7 @@ async function createTestAdmin() {
     console.log('🔧 Creating test admin user...');
     
     // Try to create a user with a realistic email
-    const testEmail = 'testadmin@beautyfetch.app';
+    const testEmail = 'testadmin@gmail.com';
     const testPassword = 'password123';
     
     console.log('1. Creating auth user...');
