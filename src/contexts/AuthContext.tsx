@@ -111,8 +111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchUserProfile(user.id);
-      if (profile?.role === 'store_owner') {
+      const profileData = await fetchUserProfile(user.id);
+      if (profileData?.role === 'store_owner') {
         await fetchUserStore(user.id);
       }
     }

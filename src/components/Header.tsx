@@ -12,9 +12,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, profile, loading, initialized, signOut } = useAuth();
+  const { user, profile, loading, initialized, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Add debugging to see the admin status
+  console.log('Header render - User:', user?.id, 'Profile:', profile, 'isAdmin:', isAdmin());
 
   const handleLogout = async () => {
     await signOut();
@@ -104,7 +107,7 @@ const Header = () => {
                 {user ? (
                   <>
                     {/* Show admin button for admin users */}
-                    {profile?.role === "admin" && (
+                    {isAdmin() && (
                       <Link to="/admin">
                         <Button variant="outline" size="sm">
                           <Shield className="h-4 w-4 mr-2" />
@@ -199,7 +202,7 @@ const Header = () => {
                           </Link>
                         </DropdownMenuItem>
                         {/* Show admin link in dropdown for easier access */}
-                        {profile?.role === "admin" && (
+                        {isAdmin() && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
@@ -324,7 +327,7 @@ const Header = () => {
                       Order History
                     </Link>
                     
-                    {profile?.role === "admin" && (
+                    {isAdmin() && (
                       <Link
                         to="/admin"
                         className="text-gray-700 hover:text-pink-600 block px-3 py-2 text-base font-medium"
