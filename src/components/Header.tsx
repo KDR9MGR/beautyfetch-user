@@ -224,7 +224,7 @@ const Header = () => {
                 ) : (
                   <>
                     <div className="flex items-center gap-2">
-                      <Link to="/login">
+                      <Link to="/auth">
                         <Button variant="outline" size="sm">
                           <User className="h-4 w-4 mr-2" />
                           Sign In
@@ -369,7 +369,7 @@ const Header = () => {
 
               {!user && !showLoading && (
                 <Link
-                  to="/login"
+                  to="/auth"
                   className="text-gray-700 hover:text-pink-600 block px-3 py-2 text-base font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
