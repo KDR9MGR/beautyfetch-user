@@ -124,6 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session
     const getInitialSession = async () => {
       try {
+        setLoading(true);
+        console.log('Getting initial session...'); // Debug log
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -136,6 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
+        console.log('Initial session:', session?.user?.id); // Debug log
         if (session?.user && mounted) {
           setUser(session.user);
           const profileData = await fetchUserProfile(session.user.id);
