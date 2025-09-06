@@ -23,7 +23,7 @@ import { Store, Package, Tags, ShoppingCart, FileText, Users, LogOut, CheckCircl
 import { Link } from "react-router-dom";
 
 const Admin = () => {
-  const { user, profile, loading, initialized } = useAuth();
+  const { user, profile, loading, initialized, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -54,7 +54,7 @@ const Admin = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",

@@ -21,14 +21,14 @@ import {
 } from 'lucide-react';
 
 export const DriverHeader = () => {
-  const { user, profile, isDriver } = useAuth();
+  const { user, profile, isDriver, signOut } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -219,4 +219,4 @@ export const DriverHeader = () => {
       </div>
     </header>
   );
-}; 
+};

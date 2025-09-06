@@ -18,13 +18,13 @@ import {
 } from 'lucide-react';
 
 export const MerchantHeader = () => {
-  const { user, profile, userStore, isMerchant } = useAuth();
+  const { user, profile, userStore, isMerchant, signOut } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -195,4 +195,4 @@ export const MerchantHeader = () => {
       </div>
     </header>
   );
-}; 
+};

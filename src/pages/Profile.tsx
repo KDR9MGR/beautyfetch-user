@@ -35,7 +35,7 @@ const Profile = () => {
   // Redirect to login if not authenticated
   React.useEffect(() => {
     if (!loading && !user) {
-      navigate('/auth');
+      navigate('/login');
     }
   }, [user, loading, navigate]);
 
@@ -168,4 +168,4 @@ const Profile = () => {
   );
 };
 
-export default Profile; 
+export default Profile;

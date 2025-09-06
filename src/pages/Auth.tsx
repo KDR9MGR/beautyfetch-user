@@ -9,6 +9,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 
+/**
+ * Admin Authentication Component
+ * 
+ * This component is specifically designed for ADMIN LOGIN ONLY.
+ * It is protected by AdminRoute and only accessible to users with admin role.
+ * 
+ * For customer/merchant login, use UserAuth component at /login route.
+ * 
+ * Route: /auth (protected by AdminRoute)
+ */
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

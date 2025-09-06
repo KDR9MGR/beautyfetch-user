@@ -10,6 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
+/**
+ * Customer/Merchant Authentication Component
+ * 
+ * This component handles login and registration for:
+ * - Customers (regular users)
+ * - Store owners/merchants
+ * 
+ * Redirects users based on their role after successful authentication.
+ * For admin login, use Auth component at /auth route.
+ * 
+ * Route: /login
+ */
 const UserAuth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -264,7 +276,7 @@ const UserAuth = () => {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full bg-beauty-purple hover:bg-beauty-purple/90" disabled={loading}>
+                  <Button type="submit" className="w-full bg-beauty-purple hover:bg-beauty-purple/90 bg-purple-600" disabled={loading}>
                     {loading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
@@ -355,7 +367,7 @@ const UserAuth = () => {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full bg-beauty-purple hover:bg-beauty-purple/90" disabled={loading}>
+                  <Button type="submit" className="w-full bg-beauty-purple hover:bg-beauty-purple/90 bg-purple-600" disabled={loading}>
                     {loading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
@@ -386,4 +398,4 @@ const UserAuth = () => {
   );
 };
 
-export default UserAuth; 
+export default UserAuth;

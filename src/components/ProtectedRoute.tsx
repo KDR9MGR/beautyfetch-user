@@ -38,7 +38,7 @@ export const AdminRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!user || !isAdmin) {
     toast.error("You don't have admin privileges");
-    return <Navigate to="/admin-auth" />;
+    return <Navigate to="/login" />;
   }
 
   return <>{children}</>;
@@ -147,4 +147,4 @@ export const DriverRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   return <>{children}</>;
-}; 
+};

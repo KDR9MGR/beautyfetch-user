@@ -107,6 +107,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const fetchUserProfileAndStore = async (userId: string) => {
+    authLogger.debug('Fetching user profile and store data', { userId });
+    
+    try {
+      // Optimized: Fetch profile and store in parallel instead of sequentially
+      const [profileResult, storeResult] = await Promise.allSettled([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle(),
+        supabase
+          .from('stores')
+          .select('*')
+          .eq('owner_id', userId)
+          .maybeSingle()
+      ]);
+
+      // Handle profile result
+      if (profileResult.status === 'fulfilled') {
+        const { data: profileData, error: profileError } = profileResult.value;
+        
+        if (profileError) {
+          authLogger.error('Profile query returned error', profileError, { userId });
+          if (profileError.code === '42501' || profileError.message?.includes('RLS')) {
+            rlsLogger.error('RLS policy violation when fetching profile', profileError);
+          } else {
+            dbLogger.error('Database error fetching profile', profileError);
+          }
+          throw profileError;
+        }
+
+        if (profileData) {
+          authLogger.info('Profile loaded successfully', { 
+            userId, 
+            role: profileData.role,
+            email: profileData.email,
+            profileId: profileData.id
+          });
+          setProfile(profileData as Profile);
+          
+          // Handle store result only if user is a merchant
+          if (profileData.role === 'store_owner' && storeResult.status === 'fulfilled') {
+            const { data: storeData, error: storeError } = storeResult.value;
+            
+            if (storeError && storeError.code !== 'PGRST116') {
+              authLogger.error('Store query returned error', storeError, { userId });
+            } else if (storeData) {
+              authLogger.info('Store loaded successfully', { 
+                userId, 
+                storeId: storeData.id,
+                storeName: storeData.name 
+              });
+              setUserStore(storeData as Store);
+            } else {
+              setUserStore(null);
+            }
+          } else {
+            setUserStore(null);
+          }
+          
+          return profileData as Profile;
+        } else {
+          authLogger.warn('Profile not found in database', { userId });
+          setProfile(null);
+          setUserStore(null);
+          return null;
+        }
+      } else {
+        authLogger.error('Failed to fetch user profile', profileResult.reason, { userId });
+        setProfile(null);
+        setUserStore(null);
+        return null;
+      }
+    } catch (error) {
+      authLogger.error('Failed to fetch user data', error as Error, { userId });
+      setProfile(null);
+      setUserStore(null);
+      return null;
+    }
+  };
+
   const fetchUserStore = async (userId: string) => {
     authLogger.debug('Fetching user store', { userId });
     
@@ -150,10 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     if (user) {
-      const profileData = await fetchUserProfile(user.id);
-      if (profileData?.role === 'store_owner') {
-        await fetchUserStore(user.id);
-      }
+      await fetchUserProfileAndStore(user.id);
     }
   };
 
@@ -210,19 +289,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           authLogger.debug('Starting profile fetch during session restoration', { userId: session.user.id });
           
           try {
-            const profileData = await fetchUserProfile(session.user.id);
+            const profileData = await fetchUserProfileAndStore(session.user.id);
             
-            if (profileData) {
-              authLogger.info('Profile successfully loaded during session restoration', { 
-                userId: session.user.id, 
-                role: profileData.role,
-                profileId: profileData.id 
-              });
-              
-              if (profileData.role === 'store_owner') {
-                await fetchUserStore(session.user.id);
-              }
-            } else {
+            if (!profileData) {
               authLogger.warn('Profile failed to load during session restoration, but keeping session', { userId: session.user.id });
               // Don't sign out - just keep the user logged in without profile
               setProfile(null);
@@ -272,19 +341,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           let profileData: Profile | null = null;
           
           try {
-            profileData = await fetchUserProfile(session.user.id);
+            profileData = await fetchUserProfileAndStore(session.user.id);
             
             if (!profileData) {
               authLogger.warn('Profile not found for authenticated user, but keeping session', { userId: session.user.id });
               // Don't sign out - just keep the user logged in without profile
               setProfile(null);
-            }
-
-            // If merchant, fetch store details
-            if (profileData.role === 'store_owner') {
-              await fetchUserStore(session.user.id);
-            } else {
-              setUserStore(null);
             }
           } catch (profileError) {
                // Check if the error is due to invalid refresh token
@@ -385,16 +447,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserStore(null);
       setLoading(false);
       
-      // Clear browser storage immediately
+      // Clear browser storage immediately and thoroughly
       try {
-        localStorage.removeItem('supabase.auth.token');
-        localStorage.removeItem('sb-ysmzgrtfxbtqkaeltoug-auth-token');
+        // Clear all session storage
         sessionStorage.clear();
         
+        // Clear specific auth-related localStorage items
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('sb-ysmzgrtfxbtqkaeltoug-auth-token');
+        localStorage.removeItem('userLocation');
+        localStorage.removeItem('hasSeenLocationModal');
+        localStorage.removeItem('debug-session-id');
+        
+        // Clear all supabase and auth related keys
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && (key.includes('supabase') || key.includes('auth') || key.includes('sb-'))) {
+          if (key && (key.includes('supabase') || key.includes('auth') || key.includes('sb-') || key.includes('session'))) {
             keysToRemove.push(key);
           }
         }
@@ -405,17 +474,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authLogger.warn('Failed to clear some browser storage', storageError as Error);
       }
       
-      // Sign out from Supabase (don't wait for it if it takes too long)
-      setTimeout(async () => {
-        try {
-          await supabase.auth.signOut();
-          authLogger.info('User signed out from Supabase successfully');
-        } catch (error) {
-          authLogger.error('Sign out from Supabase failed', error as Error);
-        }
-      }, 0);
+      // Sign out from Supabase properly
+      try {
+        await supabase.auth.signOut();
+        authLogger.info('User signed out from Supabase successfully');
+      } catch (error) {
+        authLogger.error('Sign out from Supabase failed', error as Error);
+        // Continue with logout even if Supabase signOut fails
+      }
       
       authLogger.info('User signed out successfully');
+      
+      // Force a complete page reload to clear any cached state
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
       
     } catch (error) {
       authLogger.error('Error during sign out process', error as Error);
@@ -424,6 +497,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       setUserStore(null);
       setLoading(false);
+      
+      // Force reload even on error
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     }
   };
 

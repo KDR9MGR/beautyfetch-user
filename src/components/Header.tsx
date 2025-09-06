@@ -57,8 +57,8 @@ const Header = () => {
     { name: "Explore", href: "/explore" },
   ];
 
-  // Show loading state only during initial load, but not if we already have user data
-  const showLoading = loading && !initialized && !user;
+  // Show loading state during initial load or when user exists but profile is still loading
+  const showLoading = loading || !initialized || (user && !profile);
 
   return (
     <>
@@ -227,7 +227,7 @@ const Header = () => {
                 ) : (
                   <>
                     <div className="flex items-center gap-2">
-                      <Link to="/auth">
+                      <Link to="/login">
                         <Button variant="outline" size="sm">
                           <User className="h-4 w-4 mr-2" />
                           Sign In
@@ -372,7 +372,7 @@ const Header = () => {
 
               {!user && !showLoading && (
                 <Link
-                  to="/auth"
+                  to="/login"
                   className="text-gray-700 hover:text-pink-600 block px-3 py-2 text-base font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >

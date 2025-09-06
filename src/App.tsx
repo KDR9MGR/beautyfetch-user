@@ -33,6 +33,7 @@ import DriverDashboard from "./pages/DriverDashboard";
 import NotFound from "./pages/NotFound";
 import { LocationDemoPage } from "@/components/LocationDemoPage";
 import AuthStateDebug from "@/components/AuthStateDebug";
+import { AdminRoute } from "@/components/ProtectedRoute";
 
 
 const queryClient = new QueryClient();
@@ -72,7 +73,7 @@ const App = () => (
                 <Route path="/test-payment" element={<TestPayment />} />
                 <Route path="/track-order" element={<TrackOrder />} />
                 <Route path="/explore" element={<Explore />} />
-                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth" element={<AdminRoute><Auth /></AdminRoute>} />
                 <Route path="/login" element={<UserAuth />} />
                 <Route path="/merchant/login" element={<MerchantAuth />} />
                 <Route path="/driver/login" element={<DriverAuth />} />
