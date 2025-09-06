@@ -29,8 +29,11 @@ import UserAuth from "./pages/UserAuth";
 import MerchantAuth from "./pages/MerchantAuth";
 import DriverAuth from "./pages/DriverAuth";
 import DriverDashboard from "./pages/DriverDashboard";
+// Debug page removed for production
 import NotFound from "./pages/NotFound";
 import { LocationDemoPage } from "@/components/LocationDemoPage";
+import AuthStateDebug from "@/components/AuthStateDebug";
+
 
 const queryClient = new QueryClient();
 
@@ -79,8 +82,10 @@ const App = () => (
                 <Route path="/merchant-signup" element={<MerchantSignup />} />
                 <Route path="/driver-signup" element={<DriverSignup />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/:section" element={<Profile />} />
-              <Route path="/location-demo" element={<LocationDemoPage />} />
+                <Route path="/profile/:section" element={<Profile />} />
+                <Route path="/location-demo" element={<LocationDemoPage />} />
+                <Route path="/auth-debug" element={<AuthStateDebug />} />
+                {/* Debug route removed for production */}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>

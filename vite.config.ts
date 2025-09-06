@@ -13,18 +13,27 @@ export default defineConfig(({ mode }) => ({
       index: '/index.html'
     },
   },
-  // Add build configuration for production SPA fallback
+  // Optimized build configuration for production
   build: {
+    target: 'es2015',
+    minify: 'terser',
+    sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+          supabase: ['@supabase/supabase-js'],
+          stripe: ['@stripe/stripe-js', '@stripe/react-stripe-js']
+        },
       },
     },
+    chunkSizeWarningLimit: 1000,
   },
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
+    // Only include componentTagger in development
+    mode === 'development' && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
