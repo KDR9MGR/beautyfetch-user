@@ -171,6 +171,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (error) {
           authLogger.error('Session error during initialization', error);
+          
+          // If refresh token is invalid, clear all auth data and redirect to auth
+          if (error.message?.includes('Invalid Refresh Token') || error.code === 'refresh_token_not_found') {
+            authLogger.warn('Invalid refresh token detected, clearing auth state');
+            
+            // Clear all browser storage
+            localStorage.removeItem('supabase.auth.token');
+            localStorage.removeItem('sb-ysmzgrtfxbtqkaeltoug-auth-token');
+            
+            // Clear any other auth-related items
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && (key.includes('supabase') || key.includes('auth') || key.includes('sb-'))) {
+                keysToRemove.push(key);
+              }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            await supabase.auth.signOut();
+          }
+          
           if (mounted) {
             setUser(null);
             setProfile(null);
@@ -276,6 +298,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUserStore(null);
             }
           } catch (profileError) {
+               // Check if the error is due to invalid refresh token
+               const errorMessage = (profileError as any)?.message || '';
+               if (errorMessage.includes('Invalid Refresh Token') || errorMessage.includes('refresh_token_not_found')) {
+                 authLogger.warn('Invalid refresh token during profile fetch, clearing auth state');
+                 
+                 // Clear storage and sign out
+                 localStorage.removeItem('supabase.auth.token');
+                 localStorage.removeItem('sb-ysmzgrtfxbtqkaeltoug-auth-token');
+                 
+                 await supabase.auth.signOut();
+                 setUser(null);
+                 setProfile(null);
+                 setUserStore(null);
+                 return;
+               }
+               
                authLogger.error('Profile fetch failed during auth state change - signing out', profileError as Error, { userId: session.user.id });
                await supabase.auth.signOut();
                setUser(null);
@@ -357,15 +395,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        authLogger.error('Sign out failed', error);
-        toast.error('Failed to sign out');
-        return;
-      }
-      
-      // Clear all state
+      // Clear all state first
       setUser(null);
       setProfile(null);
       setUserStore(null);
@@ -394,10 +424,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authLogger.warn('Failed to clear some browser storage', storageError as Error);
       }
       
+      // Sign out from Supabase after clearing storage
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        authLogger.error('Sign out failed', error);
+        // Don't return here - we've already cleared the state
+      }
+      
       authLogger.info('User signed out successfully');
+      
+      // Force redirect to home page
+      window.location.href = '/';
     } catch (error) {
       authLogger.error('Error during sign out process', error as Error);
-      toast.error('Failed to sign out');
+      // Even if there's an error, clear the state and redirect
+      setUser(null);
+      setProfile(null);
+      setUserStore(null);
+      window.location.href = '/';
     } finally {
       setLoading(false);
     }
