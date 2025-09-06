@@ -75,12 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           errorHint: profileError.hint
         });
         
-        if (profileError.code === 'PGRST116') {
-          authLogger.warn('Profile not found in database', { userId, errorCode: profileError.code });
-          setProfile(null);
-          return null;
-        }
-        
         // Check for RLS policy violations
         if (profileError.code === '42501' || profileError.message?.includes('RLS')) {
           rlsLogger.error('RLS policy violation when fetching profile', profileError);
@@ -89,6 +83,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         throw profileError;
+      }
+
+      if (!profileData) {
+        authLogger.warn('Profile not found in database', { userId });
+        setProfile(null);
+        return null;
       }
 
       authLogger.info('Profile loaded successfully', { 
@@ -223,22 +223,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await fetchUserStore(session.user.id);
               }
             } else {
-              authLogger.error('Profile failed to load during session restoration - signing out user', undefined, { userId: session.user.id });
-              // If profile fails to load, sign out the user to prevent inconsistent state
-              await supabase.auth.signOut();
-              setUser(null);
+              authLogger.warn('Profile failed to load during session restoration, but keeping session', { userId: session.user.id });
+              // Don't sign out - just keep the user logged in without profile
               setProfile(null);
-              setUserStore(null);
-              return;
             }
-          } catch (profileError) {
-               authLogger.error('Profile fetch error during session restoration - signing out user', profileError as Error, { userId: session.user.id });
-               // If profile fetch throws an error, sign out the user to prevent inconsistent state
-               await supabase.auth.signOut();
-               setUser(null);
-               setProfile(null);
-               setUserStore(null);
-               return;
+           } catch (profileError) {
+                authLogger.error('Profile fetch error during session restoration, but keeping session', profileError as Error, { userId: session.user.id });
+                // Don't sign out - just keep the user logged in without profile
+                setProfile(null);
              }
         } else {
           authLogger.debug('No initial session found');
@@ -283,12 +275,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             profileData = await fetchUserProfile(session.user.id);
             
             if (!profileData) {
-              authLogger.error('Profile not found for authenticated user - signing out', undefined, { userId: session.user.id });
-              await supabase.auth.signOut();
-              setUser(null);
+              authLogger.warn('Profile not found for authenticated user, but keeping session', { userId: session.user.id });
+              // Don't sign out - just keep the user logged in without profile
               setProfile(null);
-              setUserStore(null);
-              return;
             }
 
             // If merchant, fetch store details
@@ -314,12 +303,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                  return;
                }
                
-               authLogger.error('Profile fetch failed during auth state change - signing out', profileError as Error, { userId: session.user.id });
-               await supabase.auth.signOut();
-               setUser(null);
+               authLogger.error('Profile fetch failed during auth state change, but keeping session', profileError as Error, { userId: session.user.id });
+               // Don't sign out - just keep the user logged in without profile
                setProfile(null);
-               setUserStore(null);
-               return;
              }
 
           // Handle driver application status check
@@ -395,7 +381,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // Clear all state first
+      // Sign out from Supabase first
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        authLogger.error('Sign out failed', error);
+      }
+      
+      // Clear all state
       setUser(null);
       setProfile(null);
       setUserStore(null);
@@ -424,24 +416,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authLogger.warn('Failed to clear some browser storage', storageError as Error);
       }
       
-      // Sign out from Supabase after clearing storage
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        authLogger.error('Sign out failed', error);
-        // Don't return here - we've already cleared the state
-      }
-      
       authLogger.info('User signed out successfully');
       
-      // Force redirect to home page
-      window.location.href = '/';
     } catch (error) {
       authLogger.error('Error during sign out process', error as Error);
-      // Even if there's an error, clear the state and redirect
+      // Even if there's an error, clear the state
       setUser(null);
       setProfile(null);
       setUserStore(null);
-      window.location.href = '/';
     } finally {
       setLoading(false);
     }
