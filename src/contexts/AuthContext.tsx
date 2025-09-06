@@ -11,7 +11,7 @@ interface Profile {
   email: string;
   phone: string | null;
   avatar_url: string | null;
-  role: 'customer' | 'store_owner' | 'admin' | 'driver';
+  role: 'customer' | 'store_owner' | 'admin' | 'driver' | null;
   created_at: string;
   updated_at: string;
 }
@@ -111,76 +111,98 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authLogger.debug('Fetching user profile and store data', { userId });
     
     try {
-      // Optimized: Fetch profile and store in parallel instead of sequentially
-      const [profileResult, storeResult] = await Promise.allSettled([
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle(),
-        supabase
-          .from('stores')
-          .select('*')
-          .eq('owner_id', userId)
-          .maybeSingle()
-      ]);
-
-      // Handle profile result
-      if (profileResult.status === 'fulfilled') {
-        const { data: profileData, error: profileError } = profileResult.value;
+      // First, fetch only the profile with minimal fields for faster response
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, role, email, first_name, last_name')
+        .eq('id', userId)
+        .maybeSingle();
         
-        if (profileError) {
-          authLogger.error('Profile query returned error', profileError, { userId });
-          if (profileError.code === '42501' || profileError.message?.includes('RLS')) {
-            rlsLogger.error('RLS policy violation when fetching profile', profileError);
-          } else {
-            dbLogger.error('Database error fetching profile', profileError);
-          }
-          throw profileError;
-        }
-
-        if (profileData) {
-          authLogger.info('Profile loaded successfully', { 
-            userId, 
-            role: profileData.role,
-            email: profileData.email,
-            profileId: profileData.id
-          });
-          setProfile(profileData as Profile);
-          
-          // Handle store result only if user is a merchant
-          if (profileData.role === 'store_owner' && storeResult.status === 'fulfilled') {
-            const { data: storeData, error: storeError } = storeResult.value;
-            
-            if (storeError && storeError.code !== 'PGRST116') {
-              authLogger.error('Store query returned error', storeError, { userId });
-            } else if (storeData) {
-              authLogger.info('Store loaded successfully', { 
-                userId, 
-                storeId: storeData.id,
-                storeName: storeData.name 
-              });
-              setUserStore(storeData as Store);
-            } else {
-              setUserStore(null);
-            }
-          } else {
-            setUserStore(null);
-          }
-          
-          return profileData as Profile;
+      if (profileError) {
+        authLogger.error('Profile query returned error', profileError, { userId });
+        if (profileError.code === '42501' || profileError.message?.includes('RLS')) {
+          rlsLogger.error('RLS policy violation when fetching profile', profileError);
         } else {
-          authLogger.warn('Profile not found in database', { userId });
-          setProfile(null);
-          setUserStore(null);
-          return null;
+          dbLogger.error('Database error fetching profile', profileError);
         }
-      } else {
-        authLogger.error('Failed to fetch user profile', profileResult.reason, { userId });
+        throw profileError;
+      }
+
+      if (!profileData) {
+        authLogger.warn('Profile not found in database', { userId });
         setProfile(null);
         setUserStore(null);
         return null;
       }
+
+      // Set profile immediately with essential data
+      const essentialProfile = {
+        ...profileData,
+        phone: null,
+        avatar_url: null,
+        created_at: '',
+        updated_at: ''
+      } as Profile;
+      
+      setProfile(essentialProfile);
+      
+      authLogger.info('Profile loaded successfully', { 
+        userId, 
+        role: profileData.role,
+        email: profileData.email,
+        profileId: profileData.id
+      });
+      
+      // Only fetch store data if user is a merchant - do this asynchronously
+       if (profileData.role === 'store_owner') {
+         // Fetch store data in background without blocking the UI
+         (async () => {
+           try {
+             const { data: storeData, error: storeError } = await supabase
+               .from('stores')
+               .select('*')
+               .eq('owner_id', userId)
+               .maybeSingle();
+               
+             if (storeError && storeError.code !== 'PGRST116') {
+               authLogger.error('Store query returned error', storeError, { userId });
+             } else if (storeData) {
+               authLogger.info('Store loaded successfully', { 
+                 userId, 
+                 storeId: storeData.id,
+                 storeName: storeData.name 
+               });
+               setUserStore(storeData as Store);
+             } else {
+               setUserStore(null);
+             }
+           } catch (error) {
+             authLogger.error('Failed to fetch store data', error as Error, { userId });
+             setUserStore(null);
+           }
+         })();
+       } else {
+         setUserStore(null);
+       }
+       
+       // Fetch complete profile data in background
+       (async () => {
+         try {
+           const { data: fullProfileData } = await supabase
+             .from('profiles')
+             .select('*')
+             .eq('id', userId)
+             .maybeSingle();
+             
+           if (fullProfileData) {
+             setProfile(fullProfileData as Profile);
+           }
+         } catch (error) {
+            authLogger.warn('Failed to fetch complete profile data', { userId, error });
+          }
+       })();
+      
+      return essentialProfile;
     } catch (error) {
       authLogger.error('Failed to fetch user data', error as Error, { userId });
       setProfile(null);
@@ -238,6 +260,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    let isTabVisible = true;
+
+    // Handle page visibility changes
+    const handleVisibilityChange = () => {
+      isTabVisible = !document.hidden;
+      authLogger.debug('Tab visibility changed', { isVisible: isTabVisible });
+      
+      // When tab becomes visible again, refresh session if needed
+       if (isTabVisible && !loading) {
+         authLogger.debug('Tab became visible, checking session validity');
+         // Small delay to ensure tab is fully active
+         setTimeout(async () => {
+           try {
+             const { data: { session }, error } = await supabase.auth.getSession();
+             
+             if (error) {
+               authLogger.warn('Session error after tab became visible', error);
+               // Don't immediately clear auth state for network errors
+               if (!error.message?.includes('Network') && !error.message?.includes('fetch')) {
+                 setUser(null);
+                 setProfile(null);
+                 setUserStore(null);
+               }
+               return;
+             }
+             
+             if (session?.user && !user) {
+               // Session exists but user state is null - restore it
+               authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
+               setUser(session.user);
+               await fetchUserProfileAndStore(session.user.id);
+             } else if (!session && user) {
+               // User state exists but no session - clear it
+               authLogger.warn('Session lost while tab was hidden, clearing auth state');
+               setUser(null);
+               setProfile(null);
+               setUserStore(null);
+             }
+           } catch (error) {
+             authLogger.error('Error checking session after tab visibility change', error as Error);
+           }
+         }, 100);
+       }
+    };
+
+    // Handle window focus/blur events
+    const handleFocus = () => {
+      authLogger.debug('Window gained focus');
+    };
+
+    const handleBlur = () => {
+      authLogger.debug('Window lost focus');
+    };
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
 
     // Get initial session
     const getInitialSession = async () => {
@@ -246,13 +326,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         setLoading(true);
         console.log('Getting initial session...'); // Debug log
+        
+        // Get session with longer timeout and better error handling
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           authLogger.error('Session error during initialization', error);
           
-          // If refresh token is invalid, clear all auth data and redirect to auth
-          if (error.message?.includes('Invalid Refresh Token') || error.code === 'refresh_token_not_found') {
+          // Handle different types of session errors
+          if (error.message?.includes('Invalid Refresh Token') || 
+              error.code === 'refresh_token_not_found' ||
+              error.message?.includes('refresh_token_not_found')) {
             authLogger.warn('Invalid refresh token detected, clearing auth state');
             
             // Clear all browser storage
@@ -270,6 +354,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             keysToRemove.forEach(key => localStorage.removeItem(key));
             
             await supabase.auth.signOut();
+          } else if (error.message?.includes('Network') || error.message?.includes('fetch')) {
+            // Network errors - don't clear auth state, just log and continue
+            authLogger.warn('Network error during session initialization, will retry on tab focus', error);
           }
           
           if (mounted) {
@@ -313,6 +400,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } finally {
         if (mounted) {
+          console.log('AuthContext: Setting loading=false, initialized=true in getInitialSession');
           setLoading(false);
           setInitialized(true);
         }
@@ -337,6 +425,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           authLogger.debug('Processing user login', { userId: session.user.id });
           setUser(session.user);
+          
+          // Set loading to false immediately after setting user to improve perceived performance
+          setLoading(false);
+          setInitialized(true);
           
           let profileData: Profile | null = null;
           
@@ -370,35 +462,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                setProfile(null);
              }
 
-          // Handle driver application status check
+          // Handle driver application status check asynchronously to not block sign-in
           if (profileData?.role !== 'driver') {
-            try {
-              const { data: application } = await supabase
-                .from('driver_applications')
-                .select('status')
-                .eq('email', session.user.email)
-                .single();
+            // Run this check in background without blocking the sign-in process
+            setTimeout(async () => {
+              try {
+                const { data: application } = await supabase
+                  .from('driver_applications')
+                  .select('status')
+                  .eq('email', session.user.email)
+                  .single();
 
-              if (application) {
-                switch (application.status) {
-                  case 'pending':
-                    toast.info("Your driver application is pending review.");
-                    break;
-                  case 'in_review':
-                    toast.info("Your application is being reviewed.");
-                    break;
-                  case 'needs_info':
-                    toast.warning("Additional information needed for your application.");
-                    break;
-                  case 'rejected':
-                    toast.error("Your driver application was rejected.");
-                    break;
+                if (application) {
+                  switch (application.status) {
+                    case 'pending':
+                      toast.info("Your driver application is pending review.");
+                      break;
+                    case 'in_review':
+                      toast.info("Your application is being reviewed.");
+                      break;
+                    case 'needs_info':
+                      toast.warning("Additional information needed for your application.");
+                      break;
+                    case 'rejected':
+                      toast.error("Your driver application was rejected.");
+                      break;
+                  }
                 }
+              } catch (error) {
+                // Silently handle driver application check errors
+                console.log('Driver application check skipped:', error);
               }
-            } catch (error) {
-              // Silently handle driver application check errors
-              console.log('Driver application check skipped:', error);
-            }
+            }, 1000); // Delay by 1 second to not block sign-in
           }
         } else {
           authLogger.info('User logged out, clearing session data');
@@ -415,7 +510,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUserStore(null);
         }
       } finally {
-        if (mounted) {
+        if (mounted && !session?.user) {
+          // Only set loading=false here if there's no user (logout case)
+          // For login case, we set it earlier for better performance
+          console.log('AuthContext: Setting loading=false, initialized=true for logout case');
           setLoading(false);
           setInitialized(true);
         }
@@ -425,13 +523,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      
+      // Clean up event listeners
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
     };
   }, []);
 
   const isAdmin = () => {
-    const result = profile?.role === 'admin';
-    authLogger.debug('isAdmin check', { profileRole: profile?.role, isAdmin: result, profileExists: !!profile });
-    return result;
+    // Check current profile first
+    if (profile?.role === 'admin') {
+      // Cache the admin status for quick access during refresh
+      localStorage.setItem('cached_user_role', 'admin');
+      return true;
+    }
+    
+    // If profile is temporarily null but user exists, check cached role
+    if (user && !profile) {
+      const cachedRole = localStorage.getItem('cached_user_role');
+      const result = cachedRole === 'admin';
+      authLogger.debug('isAdmin check using cached role', { cachedRole, isAdmin: result, userExists: !!user });
+      return result;
+    }
+    
+    // If we reach here, user is not admin
+    // Clear any cached admin role
+    localStorage.removeItem('cached_user_role');
+    
+    authLogger.debug('isAdmin check - not admin', { profileRole: profile?.role, isAdmin: false, profileExists: !!profile });
+    return false;
   };
   const isMerchant = () => profile?.role === 'store_owner';
   const isDriver = () => profile?.role === 'driver';
@@ -458,6 +579,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('userLocation');
         localStorage.removeItem('hasSeenLocationModal');
         localStorage.removeItem('debug-session-id');
+        localStorage.removeItem('cached_user_role');
         
         // Clear all supabase and auth related keys
         const keysToRemove = [];
@@ -485,11 +607,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       authLogger.info('User signed out successfully');
       
-      // Force a complete page reload to clear any cached state
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
-      
     } catch (error) {
       authLogger.error('Error during sign out process', error as Error);
       // Ensure state is cleared even if there's an error
@@ -497,11 +614,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       setUserStore(null);
       setLoading(false);
-      
-      // Force reload even on error
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
     }
   };
 
@@ -526,10 +638,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}

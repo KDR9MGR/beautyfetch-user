@@ -72,36 +72,13 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // Check if user is admin
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-
-        if (profileError) {
-          toast({
-            title: "Error",
-            description: "Failed to fetch user profile",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (profile?.role !== "admin") {
-          await supabase.auth.signOut();
-          toast({
-            title: "Access Denied",
-            description: "Only administrators can access this area",
-            variant: "destructive",
-          });
-          return;
-        }
-
         toast({
           title: "Success",
           description: "Logged in successfully",
         });
+        
+        // Let AuthContext handle profile loading and admin verification
+        // The useEffect will handle role-based navigation
         navigate("/admin");
       }
     } catch (error) {

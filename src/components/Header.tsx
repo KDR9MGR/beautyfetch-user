@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Search, User, Menu, X, Shield, LogOut, ChevronDown, Package, MapPin, CreditCard, Heart, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,37 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, profile, loading, initialized, signOut, isAdmin } = useAuth();
+  const { user, profile, loading, initialized, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  // Add debugging to see the admin status
-  console.log('Header render - User:', user?.id, 'Profile:', profile, 'isAdmin:', isAdmin());
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading || !initialized) {
+        console.warn('Auth loading timeout - forcing initialization');
+        setLoadingTimeout(true);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timer);
+  }, [loading, initialized]);
+
+  // Show loading state only during initial load, not when profile is temporarily missing
+  // Also respect the timeout to prevent infinite loading
+  const showLoading = (loading || !initialized) && !loadingTimeout;
+
+  // Debug logging
+  console.log('Header render:', { 
+    user: !!user, 
+    profile: !!profile, 
+    isAdmin: isAdmin(), 
+    loading, 
+    initialized, 
+    showLoading,
+    loadingTimeout
+  });
 
   const handleLogout = async () => {
     await signOut();
@@ -56,9 +81,6 @@ const Header = () => {
     { name: "Stores", href: "/stores" },
     { name: "Explore", href: "/explore" },
   ];
-
-  // Show loading state during initial load or when user exists but profile is still loading
-  const showLoading = loading || !initialized || (user && !profile);
 
   return (
     <>

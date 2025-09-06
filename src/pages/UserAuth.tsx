@@ -63,53 +63,66 @@ const UserAuth = () => {
     e.preventDefault();
     setLoading(true);
 
+    // Add timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        toast({
+          title: "Login Timeout",
+          description: "Login is taking too long. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }, 15000); // 15 second timeout
+
     try {
       console.log('Attempting login with:', { email }); // Debug log
+      console.log('Supabase client initialized:', !!supabase);
+      
+      // Show immediate feedback
+      toast({
+        title: "Signing in...",
+        description: "Please wait while we authenticate you",
+      });
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
+      console.log('Login response:', { data, error }); // Enhanced debug log
+      clearTimeout(timeoutId);
+
       if (error) {
+        console.error('Login error details:', error);
         toast({
           title: "Login Failed",
-          description: error.message,
+          description: error.message || 'Unknown authentication error',
           variant: "destructive",
         });
         return;
       }
 
       if (data.user) {
-        // Check user role to ensure it's a customer
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-
-        if (profileError) {
-          toast({
-            title: "Error",
-            description: "Failed to fetch user profile",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Redirect based on role
-        if (profile?.role === "admin") {
-          navigate("/admin");
-        } else if (profile?.role === "store_owner") {
-          navigate("/merchant");
-        } else {
-          toast({
-            title: "Welcome back!",
-            description: "You have been successfully logged in",
-          });
-          navigate("/");
-        }
+        console.log('Login successful, user:', data.user.id);
+        toast({
+          title: "Welcome back!",
+          description: "You have been successfully logged in",
+        });
+        
+        // Let AuthContext handle profile loading and redirect
+        // The useEffect will handle role-based navigation
+        navigate("/");
+      } else {
+        console.warn('No user data returned from login');
+        toast({
+          title: "Login Issue",
+          description: "Authentication succeeded but no user data received",
+          variant: "destructive",
+        });
       }
     } catch (error) {
+      clearTimeout(timeoutId);
       toast({
         title: "Error",
         description: "An unexpected error occurred",
@@ -144,6 +157,9 @@ const UserAuth = () => {
     setLoading(true);
 
     try {
+      console.log('Attempting signup with:', { email }); // Debug log
+      console.log('Supabase client initialized:', !!supabase);
+      
       const redirectUrl = `${window.location.origin}/`;
       
       const { data, error } = await supabase.auth.signUp({
@@ -159,16 +175,20 @@ const UserAuth = () => {
         },
       });
 
+      console.log('Signup response:', { data, error }); // Enhanced debug log
+
       if (error) {
+        console.error('Signup error details:', error);
         toast({
           title: "Signup Failed",
-          description: error.message,
+          description: error.message || 'Unknown signup error',
           variant: "destructive",
         });
         return;
       }
 
       if (data.user) {
+        console.log('Signup successful, user:', data.user.id);
         toast({
           title: "Account Created!",
           description: "Please check your email for verification before signing in.",
@@ -180,6 +200,13 @@ const UserAuth = () => {
         setConfirmPassword("");
         setFirstName("");
         setLastName("");
+      } else {
+        console.warn('No user data returned from signup');
+        toast({
+          title: "Signup Issue",
+          description: "Account creation succeeded but no user data received",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       toast({
@@ -277,7 +304,14 @@ const UserAuth = () => {
                     </div>
                   </div>
                   <Button type="submit" className="w-full bg-beauty-purple hover:bg-beauty-purple/90 bg-purple-600" disabled={loading}>
-                    {loading ? "Signing in..." : "Sign In"}
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Signing in...
+                      </div>
+                    ) : (
+                      "Sign In"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
@@ -368,7 +402,14 @@ const UserAuth = () => {
                     </div>
                   </div>
                   <Button type="submit" className="w-full bg-beauty-purple hover:bg-beauty-purple/90 bg-purple-600" disabled={loading}>
-                    {loading ? "Creating account..." : "Create Account"}
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Creating account...
+                      </div>
+                    ) : (
+                      "Create Account"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
@@ -392,8 +433,8 @@ const UserAuth = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </div>
     </div>
   );
 };
