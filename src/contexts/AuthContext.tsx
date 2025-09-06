@@ -379,29 +379,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authLogger.info('Initiating user sign out');
     
     try {
-      setLoading(true);
-      
-      // Sign out from Supabase first
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        authLogger.error('Sign out failed', error);
-      }
-      
-      // Clear all state
+      // Clear state immediately to prevent UI hanging
       setUser(null);
       setProfile(null);
       setUserStore(null);
+      setLoading(false);
       
-      // Explicitly clear all browser storage to prevent session persistence issues
+      // Clear browser storage immediately
       try {
-        // Clear localStorage
         localStorage.removeItem('supabase.auth.token');
         localStorage.removeItem('sb-ysmzgrtfxbtqkaeltoug-auth-token');
-        
-        // Clear sessionStorage
         sessionStorage.clear();
         
-        // Clear any other auth-related items
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -416,15 +405,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authLogger.warn('Failed to clear some browser storage', storageError as Error);
       }
       
+      // Sign out from Supabase (don't wait for it if it takes too long)
+      setTimeout(async () => {
+        try {
+          await supabase.auth.signOut();
+          authLogger.info('User signed out from Supabase successfully');
+        } catch (error) {
+          authLogger.error('Sign out from Supabase failed', error as Error);
+        }
+      }, 0);
+      
       authLogger.info('User signed out successfully');
       
     } catch (error) {
       authLogger.error('Error during sign out process', error as Error);
-      // Even if there's an error, clear the state
+      // Ensure state is cleared even if there's an error
       setUser(null);
       setProfile(null);
       setUserStore(null);
-    } finally {
       setLoading(false);
     }
   };
