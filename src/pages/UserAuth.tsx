@@ -73,7 +73,7 @@ const UserAuth = () => {
           variant: "destructive",
         });
       }
-    }, 15000); // 15 second timeout
+    }, 3600000); // 3600 second (1 hour) timeout
 
     try {
       console.log('Attempting login with:', { email }); // Debug log
