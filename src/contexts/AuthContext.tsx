@@ -83,9 +83,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .maybeSingle();
       
-      // Add timeout to prevent hanging requests - use shorter timeout for profile fetch
+      // Add timeout to prevent hanging requests
+      // Use longer timeout for tab switching scenarios, shorter for initial login
+      const isInitialLogin = !profile; // If no profile exists, this is likely initial login
+      const timeoutDuration = isInitialLogin ? 10000 : 3600000; // 10s for login, 1h for tab switching
+      
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 30000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), timeoutDuration)
       );
       
       const { data: profileData, error: profileError } = await Promise.race([
