@@ -591,7 +591,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Clear browser storage immediately and thoroughly
       try {
-        // Clear all session storage
+        // Clear all session storage including admin session markers
+        sessionStorage.removeItem('admin-session-active');
         sessionStorage.clear();
         
         // Clear specific auth-related localStorage items

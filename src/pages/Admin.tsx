@@ -46,26 +46,41 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    // Only redirect when auth is fully initialized
+    // Only redirect when auth is fully initialized and stable
+    // Add extra protection against tab switching temporary states
     if (initialized && !loading) {
+      // Check for cached admin role to prevent redirect during profile reload
+      const cachedRole = localStorage.getItem('cached_user_role');
+      const isAdminByCachedRole = cachedRole === 'admin';
+      
       if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to access the admin dashboard",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
+        // Only redirect if we're sure there's no session (not during tab switch restoration)
+        const hasRecentSession = sessionStorage.getItem('admin-session-active');
+        if (!hasRecentSession) {
+          toast({
+            title: "Authentication Required", 
+            description: "Please log in to access the admin dashboard",
+            variant: "destructive",
+          });
+          navigate("/login");
+          return;
+        }
       }
 
-      if (profile?.role !== "admin") {
+      // Don't redirect if we have cached admin role and user exists (profile might be loading)
+      if (user && !isAdminByCachedRole && profile?.role !== "admin" && profile !== null) {
         toast({
           title: "Access Denied",
-          description: "You don't have admin privileges",
+          description: "You don't have admin privileges", 
           variant: "destructive",
         });
         navigate("/");
         return;
+      }
+      
+      // Mark that we have an active admin session
+      if (user && (profile?.role === "admin" || isAdminByCachedRole)) {
+        sessionStorage.setItem('admin-session-active', 'true');
       }
     }
   }, [user, profile, loading, initialized, navigate, toast]);
@@ -95,6 +110,9 @@ const Admin = () => {
 
   const handleLogout = async () => {
     try {
+      // Clear admin session marker
+      sessionStorage.removeItem('admin-session-active');
+      
       await signOut();
       toast({
         title: "Logged out",
@@ -112,7 +130,12 @@ const Admin = () => {
   };
 
   // Show loading state while authentication is being determined
-  if (loading || !initialized) {
+  // But allow cached admin role to bypass loading for better UX during tab switches
+  const cachedRole = localStorage.getItem('cached_user_role');
+  const isAdminByCachedRole = cachedRole === 'admin';
+  const hasAdminSession = sessionStorage.getItem('admin-session-active');
+  
+  if ((loading || !initialized) && !isAdminByCachedRole && !hasAdminSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -124,7 +147,11 @@ const Admin = () => {
   }
 
   // Show access denied screen if not authenticated or not admin
-  if (!user || profile?.role !== "admin") {
+  // But be more lenient during tab switching when we have cached admin status
+  const shouldShowAccessDenied = (!user && !hasAdminSession) || 
+    (user && profile !== null && profile?.role !== "admin" && !isAdminByCachedRole);
+    
+  if (shouldShowAccessDenied) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md mx-auto p-8">
