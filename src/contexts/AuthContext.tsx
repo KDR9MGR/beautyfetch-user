@@ -69,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userStore, setUserStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [isActivelyLoggingIn, setIsActivelyLoggingIn] = useState(false);
 
 
   const fetchUserProfileAndStore = async (userId: string) => {
@@ -84,18 +85,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
       
       // Add timeout to prevent hanging requests
-      // Use longer timeout for tab switching scenarios, shorter for initial login
+      // Use reasonable timeouts for different scenarios
       const isInitialLogin = !profile; // If no profile exists, this is likely initial login
-      const timeoutDuration = isInitialLogin ? 10000 : 3600000; // 10s for login, 1h for tab switching
+      const timeoutDuration = isInitialLogin ? 10000 : 30000; // 10s for login, 30s for tab switching
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile fetch timeout')), timeoutDuration)
       );
       
-      const { data: profileData, error: profileError } = await Promise.race([
+      const result = await Promise.race([
         profilePromise,
         timeoutPromise
-      ]) as any;
+      ]);
+      const { data: profileData, error: profileError } = result as { data: Profile | null; error: any };
         
       if (profileError) {
         authLogger.error('Profile query returned error', profileError, { userId });
@@ -183,41 +185,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authLogger.debug('Tab visibility changed', { isVisible: isTabVisible });
       
       // When tab becomes visible again, refresh session if needed
-       if (isTabVisible && !loading) {
-         authLogger.debug('Tab became visible, checking session validity');
-         // Small delay to ensure tab is fully active
-         setTimeout(async () => {
-           try {
-             const { data: { session }, error } = await supabase.auth.getSession();
-             
-             if (error) {
-               authLogger.warn('Session error after tab became visible', error);
-               // Don't immediately clear auth state for network errors
-               if (!error.message?.includes('Network') && !error.message?.includes('fetch')) {
-                 setUser(null);
-                 setProfile(null);
-                 setUserStore(null);
-               }
-               return;
-             }
-             
-             if (session?.user && !user) {
-               // Session exists but user state is null - restore it
-               authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
-               setUser(session.user);
-               await fetchUserProfileAndStore(session.user.id);
-             } else if (!session && user) {
-               // User state exists but no session - clear it
-               authLogger.warn('Session lost while tab was hidden, clearing auth state');
-               setUser(null);
-               setProfile(null);
-               setUserStore(null);
-             }
-           } catch (error) {
-             authLogger.error('Error checking session after tab visibility change', error as Error);
-           }
-         }, 100);
-       }
+      if (isTabVisible && !isActivelyLoggingIn) {
+        authLogger.debug('Tab became visible, checking session validity');
+        // Small delay to ensure tab is fully active
+        setTimeout(async () => {
+          // Double check we're not in the middle of logging in
+          if (isActivelyLoggingIn) {
+            authLogger.debug('Skipping tab visibility session check - login in progress');
+            return;
+          }
+          
+          try {
+            // Set loading state for better UX during session check
+            setLoading(true);
+            
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error) {
+              authLogger.warn('Session error after tab became visible', error);
+              // Don't immediately clear auth state for network errors
+              if (!error.message?.includes('Network') && !error.message?.includes('fetch')) {
+                setUser(null);
+                setProfile(null);
+                setUserStore(null);
+              }
+              setLoading(false);
+              return;
+            }
+            
+            if (session?.user && !user) {
+              // Session exists but user state is null - restore it
+              authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
+              setUser(session.user);
+              
+              try {
+                await fetchUserProfileAndStore(session.user.id);
+              } catch (profileError) {
+                authLogger.error('Profile fetch failed during session restoration from tab switch', profileError as Error);
+                // Don't clear user state, just log the error and continue
+                // The user can still access the app with basic session data
+              }
+            } else if (!session && user) {
+              // User state exists but no session - clear it
+              authLogger.warn('Session lost while tab was hidden, clearing auth state');
+              setUser(null);
+              setProfile(null);
+              setUserStore(null);
+            }
+            
+            // Always clear loading state
+            setLoading(false);
+          } catch (error) {
+            authLogger.error('Error checking session after tab visibility change', error as Error);
+            setLoading(false);
+          }
+        }, 100);
+      }
     };
 
     // Handle window focus/blur events
@@ -352,6 +375,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         if (session?.user) {
           authLogger.debug('Processing user login', { userId: session.user.id });
+          setIsActivelyLoggingIn(true); // Mark login as active
           setUser(session.user);
           
           // Set loading to false immediately after setting user to improve perceived performance
@@ -427,6 +451,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                  setUser(null);
                  setProfile(null);
                  setUserStore(null);
+                 setIsActivelyLoggingIn(false); // Clear login state
                  return;
                }
                
@@ -442,6 +467,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                  setProfile(null);
                }
              }
+             
+             // Mark login as complete
+             setIsActivelyLoggingIn(false);
 
           // Handle driver application status check asynchronously to not block sign-in
           if (profileData?.role !== 'driver') {
@@ -481,6 +509,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setProfile(null);
           setUserStore(null);
+          setIsActivelyLoggingIn(false); // Clear login state on logout
         }
       } catch (error) {
         authLogger.error('Error in auth state change handler', error as Error, { event });

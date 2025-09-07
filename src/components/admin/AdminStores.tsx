@@ -859,18 +859,19 @@ export const AdminStores = () => {
           <CardDescription>Manage stores with comprehensive details and analytics</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Store Name</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Orders</TableHead>
-                <TableHead>Revenue</TableHead>
-                <TableHead>Commission</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Store Name</TableHead>
+                  <TableHead className="whitespace-nowrap">Owner</TableHead>
+                  <TableHead className="whitespace-nowrap">Orders</TableHead>
+                  <TableHead className="whitespace-nowrap">Revenue</TableHead>
+                  <TableHead className="whitespace-nowrap">Commission</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {filteredStores.map((store) => (
                 <TableRow key={store.id}>
@@ -930,7 +931,8 @@ export const AdminStores = () => {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

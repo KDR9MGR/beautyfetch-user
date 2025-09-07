@@ -1586,18 +1586,19 @@ export const AdminProducts = () => {
           <CardDescription>Manage all products with multi-store support</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Categories</TableHead>
-                <TableHead>Stores</TableHead>
-                <TableHead>Base Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Featured</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Product Name</TableHead>
+                  <TableHead className="whitespace-nowrap">Categories</TableHead>
+                  <TableHead className="whitespace-nowrap">Stores</TableHead>
+                  <TableHead className="whitespace-nowrap">Base Price</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Featured</TableHead>
+                  <TableHead className="whitespace-nowrap">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {sortedProducts.map((product) => (
                 <TableRow key={product.id}>
@@ -1658,6 +1659,7 @@ export const AdminProducts = () => {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

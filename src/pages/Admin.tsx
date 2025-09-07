@@ -183,21 +183,23 @@ const Admin = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:grid-cols-13">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="approvals">Approvals</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
-            <TabsTrigger value="stores">Stores</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="catalog">Catalog</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="drivers">Drivers</TabsTrigger>
-            <TabsTrigger value="blog">Blog</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto">
+            <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground min-w-max">
+              <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
+              <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
+              <TabsTrigger value="approvals" className="whitespace-nowrap">Approvals</TabsTrigger>
+              <TabsTrigger value="messages" className="whitespace-nowrap">Messages</TabsTrigger>
+              <TabsTrigger value="stores" className="whitespace-nowrap">Stores</TabsTrigger>
+              <TabsTrigger value="products" className="whitespace-nowrap">Products</TabsTrigger>
+              <TabsTrigger value="categories" className="whitespace-nowrap">Categories</TabsTrigger>
+              <TabsTrigger value="catalog" className="whitespace-nowrap">Catalog</TabsTrigger>
+              <TabsTrigger value="orders" className="whitespace-nowrap">Orders</TabsTrigger>
+              <TabsTrigger value="drivers" className="whitespace-nowrap">Drivers</TabsTrigger>
+              <TabsTrigger value="blog" className="whitespace-nowrap">Blog</TabsTrigger>
+              <TabsTrigger value="users" className="whitespace-nowrap">Users</TabsTrigger>
+              <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
