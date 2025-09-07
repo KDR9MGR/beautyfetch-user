@@ -5,6 +5,25 @@ import { useFeaturedProducts } from "@/hooks/useProducts";
 import { useCart } from "@/contexts/CartContext";
 import { ShoppingCart, Heart } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { Tables } from "@/integrations/supabase/types";
+
+interface FeaturedProduct extends Tables<'products'> {
+  stores: {
+    id?: string;
+    name: string;
+    slug: string;
+    logo_url: string | null;
+  } | null;
+  categories: {
+    name: string;
+    slug: string;
+  } | null;
+  product_images: Array<{
+    image_url: string;
+    alt_text: string | null;
+    is_primary: boolean | null;
+  }>;
+}
 
 export function ProductsGrid() {
   const { data: products, isLoading, error } = useFeaturedProducts();
@@ -15,9 +34,12 @@ export function ProductsGrid() {
     return null;
   }
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = (product: FeaturedProduct) => {
     // Transform the product data to match what cart expects
-    const transformedProduct = {
+    const transformedProduct: Tables<'products'> & { 
+      store: Tables<'stores'>; 
+      images: Tables<'product_images'>[] 
+    } = {
       ...product,
       store: {
         id: product.stores?.id || 'unknown',
@@ -31,19 +53,21 @@ export function ProductsGrid() {
         cover_image_url: '',
         featured: false,
         status: 'active' as const,
-        created_at: '',
-        updated_at: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         owner_id: '',
         rating: 0,
         total_reviews: 0
-      },
-      images: (product.product_images || []).map((img: any) => ({
-        ...img,
+      } as Tables<'stores'>,
+      images: (product.product_images || []).map((img) => ({
         id: `${product.id}_${img.image_url}`,
         product_id: product.id,
-        created_at: '',
-        sort_order: img.is_primary ? 0 : 1
-      }))
+        image_url: img.image_url,
+        alt_text: img.alt_text,
+        is_primary: img.is_primary,
+        sort_order: img.is_primary ? 0 : 1,
+        created_at: new Date().toISOString()
+      })) as Tables<'product_images'>[]
     };
     
     addToCart(transformedProduct, 1);

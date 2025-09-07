@@ -1,52 +1,10 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { supabase } from "../integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 
-type DriverApplication = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  date_of_birth: string;
-  driver_license_number: string;
-  vehicle_make: string;
-  vehicle_model: string;
-  vehicle_year: number;
-  vehicle_plate: string;
-  vehicle_color: string | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  address: any;
-  status: string;
-  admin_notes: string | null;
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type MerchantApplication = {
-  id: string;
-  business_name: string;
-  business_type: string | null;
-  contact_person_first_name: string;
-  contact_person_last_name: string;
-  email: string;
-  phone: string;
-  business_address: any;
-  business_description: string | null;
-  estimated_monthly_revenue: number | null;
-  previous_experience: string | null;
-  business_license_number: string | null;
-  tax_id: string | null;
-  status: string;
-  admin_notes: string | null;
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
+type DriverApplication = Tables<'driver_applications'>;
+type MerchantApplication = Tables<'merchant_applications'>;
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -101,7 +59,14 @@ export async function createUserProfile(email: string, role: 'driver' | 'store_o
   }
 }
 
-export async function handleApplicationApproval(type: 'driver' | 'merchant', id: string, reviewData: any) {
+interface ReviewData {
+  status: 'approved' | 'rejected' | 'needs_info';
+  admin_notes?: string;
+  reviewed_by: string;
+  reviewed_at: string;
+}
+
+export async function handleApplicationApproval(type: 'driver' | 'merchant', id: string, reviewData: ReviewData) {
   try {
     // Get application data
     const { data: application, error: appError } = await supabase
@@ -264,7 +229,7 @@ export async function fixMissingProfiles() {
         await createUserProfile(
           driver.email,
           'driver',
-          driver as any
+          driver as DriverApplication
         );
       } catch (error) {
         console.error(`Error fixing driver ${driver.id}:`, error);

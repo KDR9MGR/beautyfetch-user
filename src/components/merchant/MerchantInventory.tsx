@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 import { toast } from '@/components/ui/sonner';
 import { Package, AlertTriangle, TrendingDown, TrendingUp, Search, Filter, RefreshCw } from 'lucide-react';
 

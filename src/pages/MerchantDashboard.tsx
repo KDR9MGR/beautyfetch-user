@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 import { MerchantRoute } from '@/components/ProtectedRoute';
 import { MerchantHeader } from '@/components/merchant/MerchantHeader';
 import { MerchantStoreSettings } from '@/components/merchant/MerchantStoreSettings';
@@ -325,4 +325,4 @@ const MerchantDashboard = () => {
   );
 };
 
-export default MerchantDashboard; 
+export default MerchantDashboard;

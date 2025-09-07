@@ -1,13 +1,31 @@
 import React, { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthResponse, AuthError } from '@supabase/supabase-js';
+
+interface TestResult {
+  healthCheck?: {
+    data: unknown;
+    error: AuthError | null;
+  };
+  authTest?: {
+    data: AuthResponse;
+    error: AuthError | null;
+  };
+  signupTest?: {
+    data: AuthResponse;
+    error: AuthError | null;
+  };
+  error?: string;
+  timestamp: string;
+}
 
 const AuthTest = () => {
   const [email, setEmail] = useState('testadmin@gmail.com');
   const [password, setPassword] = useState('password123');
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<TestResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   const testConnection = async () => {
@@ -41,7 +59,7 @@ const AuthTest = () => {
       
     } catch (error) {
       console.error('Test error:', error);
-      setResult({ error: error.message });
+      setResult({ error: (error as Error).message, timestamp: new Date().toISOString() });
     } finally {
       setLoading(false);
     }
@@ -69,7 +87,7 @@ const AuthTest = () => {
       
     } catch (error) {
       console.error('Signup test error:', error);
-      setResult({ error: error.message });
+      setResult({ error: (error as Error).message, timestamp: new Date().toISOString() });
     } finally {
       setLoading(false);
     }

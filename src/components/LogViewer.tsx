@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { logger, LogLevel, LogEntry } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,9 @@ export const LogViewer: React.FC<LogViewerProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<LogLevel>(LogLevel.DEBUG);
 
-  const refreshLogs = () => {
+  const refreshLogs = useCallback(() => {
     setLogs(logger.getRecentLogs(maxLogs));
-  };
+  }, [maxLogs]);
 
   useEffect(() => {
     refreshLogs();
@@ -33,7 +33,7 @@ export const LogViewer: React.FC<LogViewerProps> = ({
       const interval = setInterval(refreshLogs, refreshInterval);
       return () => clearInterval(interval);
     }
-  }, [maxLogs, autoRefresh, refreshInterval]);
+  }, [maxLogs, autoRefresh, refreshInterval, refreshLogs]);
 
   const filteredLogs = logs.filter(log => {
     const levelMatch = log.level >= selectedLevel;

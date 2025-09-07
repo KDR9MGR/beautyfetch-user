@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   BarChart, 
@@ -85,11 +85,7 @@ export const AdminAnalytics = () => {
     to: new Date(),
   });
 
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [timeRange, dateRange]);
-
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = useCallback(async () => {
     setLoading(true);
     try {
       // Fetch real data from Supabase
@@ -215,12 +211,16 @@ export const AdminAnalytics = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange, dateRange]);
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
 
   const StatCard = ({ title, value, icon: Icon, growth, formatter = (v: number) => v.toLocaleString() }: {
     title: string;
     value: number;
-    icon: any;
+    icon: React.ComponentType<any>;
     growth?: number;
     formatter?: (value: number) => string;
   }) => (

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/components/ui/sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 import { ArrowLeft, User, Mail, Lock, Eye, EyeOff, Phone, MapPin, Car, FileText, Upload } from 'lucide-react';
 
 interface DriverApplication {

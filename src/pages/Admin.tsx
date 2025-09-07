@@ -1,12 +1,11 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { AdminStores } from "@/components/admin/AdminStores";
 import { AdminProducts } from "@/components/admin/AdminProducts";
 import { AdminCategories } from "@/components/admin/AdminCategories";
@@ -19,13 +18,32 @@ import { AdminMessages } from "@/components/admin/AdminMessages";
 import { AdminDrivers } from "@/components/admin/AdminDrivers";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
-import { Store, Package, Tags, ShoppingCart, FileText, Users, LogOut, CheckCircle, MessageSquare, Truck, Settings, BarChart3, Shield, Home, BookOpen } from "lucide-react";
+import { Store, Package, ShoppingCart, Users, LogOut, Shield, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Admin = () => {
   const { user, profile, loading, initialized, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // State management for active tab with localStorage persistence
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      return localStorage.getItem('admin-active-tab') || 'overview';
+    } catch {
+      return 'overview';
+    }
+  });
+  
+  // Save active tab to localStorage whenever it changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    try {
+      localStorage.setItem('admin-active-tab', value);
+    } catch (error) {
+      console.warn('Failed to save active tab to localStorage:', error);
+    }
+  };
 
   useEffect(() => {
     // Only redirect when auth is fully initialized
@@ -51,6 +69,29 @@ const Admin = () => {
       }
     }
   }, [user, profile, loading, initialized, navigate, toast]);
+  
+  // Handle page visibility changes to maintain tab state
+   useEffect(() => {
+     const handleVisibilityChange = () => {
+       if (!document.hidden) {
+         // When tab becomes visible, restore the active tab from localStorage
+         try {
+           const savedTab = localStorage.getItem('admin-active-tab');
+           if (savedTab && savedTab !== activeTab) {
+             setActiveTab(savedTab);
+           }
+         } catch (error) {
+           console.warn('Failed to restore active tab from localStorage:', error);
+         }
+       }
+     };
+     
+     document.addEventListener('visibilitychange', handleVisibilityChange);
+     
+     return () => {
+       document.removeEventListener('visibilitychange', handleVisibilityChange);
+     };
+   }, [activeTab]);
 
   const handleLogout = async () => {
     try {
@@ -141,7 +182,7 @@ const Admin = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="grid w-full grid-cols-6 lg:grid-cols-13">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>

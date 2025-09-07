@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { authLogger, dbLogger, rlsLogger, logger, LogLevel } from '@/lib/logger';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 
 const Debug: React.FC = () => {
   const { user, profile, userStore, loading, initialized } = useAuth();

@@ -9,6 +9,7 @@ import {
 import { useCart } from '@/contexts/CartContext';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { Tables } from '@/integrations/supabase/types';
 
 export function CartIcon() {
   const { state, removeFromCart, updateQuantity, getTotalItemCount } = useCart();
@@ -54,7 +55,7 @@ export function CartIcon() {
                 <div className="relative w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                   {primaryImage && (
                     <img
-                      src={typeof primaryImage === 'string' ? primaryImage : (primaryImage as any)?.image_url || '/placeholder.svg'}
+                      src={typeof primaryImage === 'string' ? primaryImage : (primaryImage as Tables<'product_images'>)?.image_url || '/placeholder.svg'}
                       alt={item.product.name}
                       className="w-full h-full object-cover"
                     />

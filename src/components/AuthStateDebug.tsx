@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Session } from '@supabase/supabase-js';
 
 const AuthStateDebug = () => {
   const { user, profile, loading, signOut } = useAuth();
-  const [sessionInfo, setSessionInfo] = useState<any>(null);
+  const [sessionInfo, setSessionInfo] = useState<Session | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
 
   const addLog = (message: string) => {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 import { User } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/sonner';
 import { authLogger, dbLogger, rlsLogger } from '@/lib/logger';
@@ -23,9 +23,25 @@ interface Store {
   description: string | null;
   logo_url: string | null;
   cover_image_url: string | null;
-  address: any;
-  contact_info: any;
-  business_hours: any;
+  address: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+    country?: string;
+  } | null;
+  contact_info: {
+    email?: string;
+    phone?: string;
+    website?: string;
+  } | null;
+  business_hours: {
+    [key: string]: {
+      open?: string;
+      close?: string;
+      closed?: boolean;
+    };
+  } | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -54,69 +70,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
-  const fetchUserProfile = async (userId: string) => {
-    authLogger.debug('Fetching user profile', { userId });
-    
-    try {
-      // Add detailed logging for the database query
-      authLogger.debug('Executing profile query', { userId, table: 'profiles' });
-      
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single
-
-      if (profileError) {
-        authLogger.error('Profile query returned error', profileError, {
-          userId,
-          errorCode: profileError.code,
-          errorDetails: profileError.details,
-          errorHint: profileError.hint
-        });
-        
-        // Check for RLS policy violations
-        if (profileError.code === '42501' || profileError.message?.includes('RLS')) {
-          rlsLogger.error('RLS policy violation when fetching profile', profileError);
-        } else {
-          dbLogger.error('Database error fetching profile', profileError);
-        }
-        
-        throw profileError;
-      }
-
-      if (!profileData) {
-        authLogger.warn('Profile not found in database', { userId });
-        setProfile(null);
-        return null;
-      }
-
-      authLogger.info('Profile loaded successfully', { 
-        userId, 
-        role: profileData.role,
-        email: profileData.email,
-        profileId: profileData.id
-      });
-      
-      setProfile(profileData as Profile);
-      return profileData as Profile;
-    } catch (error) {
-      authLogger.error('Failed to fetch user profile', error as Error, { userId });
-      setProfile(null);
-      return null;
-    }
-  };
 
   const fetchUserProfileAndStore = async (userId: string) => {
     authLogger.debug('Fetching user profile and store data', { userId });
     
     try {
-      // First, fetch only the profile with minimal fields for faster response
-      const { data: profileData, error: profileError } = await supabase
+      // PERFORMANCE OPTIMIZATION: Fetch complete profile data in one query with timeout
+      // This reduces the number of database calls and improves login speed
+      const profilePromise = supabase
         .from('profiles')
-        .select('id, role, email, first_name, last_name')
+        .select('*')
         .eq('id', userId)
         .maybeSingle();
+      
+      // Add timeout to prevent hanging requests
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+      );
+      
+      const { data: profileData, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]) as any;
         
       if (profileError) {
         authLogger.error('Profile query returned error', profileError, { userId });
@@ -135,16 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
-      // Set profile immediately with essential data
-      const essentialProfile = {
-        ...profileData,
-        phone: null,
-        avatar_url: null,
-        created_at: '',
-        updated_at: ''
-      } as Profile;
-      
-      setProfile(essentialProfile);
+      // Set complete profile immediately
+      const completeProfile = profileData as Profile;
+      setProfile(completeProfile);
       
       authLogger.info('Profile loaded successfully', { 
         userId, 
@@ -153,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profileId: profileData.id
       });
       
-      // Only fetch store data if user is a merchant - do this asynchronously
+      // Only fetch store data if user is a merchant - do this asynchronously to not block login
        if (profileData.role === 'store_owner') {
          // Fetch store data in background without blocking the UI
          (async () => {
@@ -184,25 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
        } else {
          setUserStore(null);
        }
-       
-       // Fetch complete profile data in background
-       (async () => {
-         try {
-           const { data: fullProfileData } = await supabase
-             .from('profiles')
-             .select('*')
-             .eq('id', userId)
-             .maybeSingle();
-             
-           if (fullProfileData) {
-             setProfile(fullProfileData as Profile);
-           }
-         } catch (error) {
-            authLogger.warn('Failed to fetch complete profile data', { userId, error });
-          }
-       })();
       
-      return essentialProfile;
+      return completeProfile;
     } catch (error) {
       authLogger.error('Failed to fetch user data', error as Error, { userId });
       setProfile(null);
@@ -211,46 +162,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const fetchUserStore = async (userId: string) => {
-    authLogger.debug('Fetching user store', { userId });
-    
-    try {
-      const { data: storeData, error: storeError } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('owner_id', userId)
-        .single();
-
-      if (storeError) {
-        if (storeError.code === 'PGRST116') {
-          authLogger.debug('No store found for user', { userId });
-          setUserStore(null);
-          return null;
-        }
-        
-        if (storeError.code === '42501' || storeError.message?.includes('RLS')) {
-          rlsLogger.error('RLS policy violation when fetching store', storeError);
-        } else {
-          dbLogger.error('Database error fetching store', storeError);
-        }
-        
-        throw storeError;
-      }
-
-      authLogger.info('Store loaded successfully', { 
-        userId, 
-        storeId: storeData.id,
-        storeName: storeData.name 
-      });
-      
-      setUserStore(storeData as Store);
-      return storeData as Store;
-    } catch (error) {
-      authLogger.error('Failed to fetch user store', error as Error, { userId });
-      setUserStore(null);
-      return null;
-    }
-  };
 
   const refreshProfile = async () => {
     if (user) {
@@ -342,6 +253,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Clear all browser storage
             localStorage.removeItem('supabase.auth.token');
             localStorage.removeItem('sb-ysmzgrtfxbtqkaeltoug-auth-token');
+            localStorage.removeItem('cached_user_role');
             
             // Clear any other auth-related items
             const keysToRemove = [];
@@ -372,24 +284,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           authLogger.info('Initial session found', { userId: session.user.id, email: session.user.email });
           setUser(session.user);
           
-          // Add extra logging for profile fetch during session restoration
-          authLogger.debug('Starting profile fetch during session restoration', { userId: session.user.id });
+          // CRITICAL FIX: Wait for profile to load completely before setting initialized=true
+          // This ensures isAdmin() has the correct data when components first render
+          authLogger.debug('Starting SYNCHRONOUS profile fetch during session restoration', { userId: session.user.id });
           
           try {
             const profileData = await fetchUserProfileAndStore(session.user.id);
             
             if (!profileData) {
               authLogger.warn('Profile failed to load during session restoration, but keeping session', { userId: session.user.id });
-              // Don't sign out - just keep the user logged in without profile
+              // Clear cached role if profile fails to load
+              localStorage.removeItem('cached_user_role');
               setProfile(null);
+            } else {
+              // Cache the role immediately for faster subsequent checks
+              if (profileData.role) {
+                localStorage.setItem('cached_user_role', profileData.role);
+                authLogger.debug('Cached user role during session restoration', { role: profileData.role });
+              }
             }
            } catch (profileError) {
                 authLogger.error('Profile fetch error during session restoration, but keeping session', profileError as Error, { userId: session.user.id });
-                // Don't sign out - just keep the user logged in without profile
+                // Clear cached role if profile fails to load
+                localStorage.removeItem('cached_user_role');
                 setProfile(null);
              }
         } else {
           authLogger.debug('No initial session found');
+          // Clear cached role when no session
+          localStorage.removeItem('cached_user_role');
         }
       } catch (error) {
         authLogger.error('Error getting initial session', error as Error);
@@ -397,6 +320,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setProfile(null);
           setUserStore(null);
+          localStorage.removeItem('cached_user_role');
         }
       } finally {
         if (mounted) {
@@ -427,18 +351,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(session.user);
           
           // Set loading to false immediately after setting user to improve perceived performance
+          // This allows the UI to show the logged-in state while profile loads in background
           setLoading(false);
           setInitialized(true);
           
+          // Show immediate feedback to user
+          toast.success('Authentication successful', {
+            description: 'Loading your profile...',
+            duration: 2000
+          });
+          
           let profileData: Profile | null = null;
           
+          // Try to get cached profile first for immediate display
+          const cachedProfile = localStorage.getItem(`profile_${session.user.id}`);
+          if (cachedProfile) {
+            try {
+              profileData = JSON.parse(cachedProfile);
+              setProfile(profileData);
+              authLogger.debug('Using cached profile data', { userId: session.user.id });
+              
+              // Show success message for cached profile
+              toast.success('Welcome back!', {
+                description: 'Profile loaded from cache',
+                duration: 1500
+              });
+            } catch (error) {
+              authLogger.warn('Failed to parse cached profile', error as Error);
+              localStorage.removeItem(`profile_${session.user.id}`);
+            }
+          }
+          
+          // Fetch fresh profile data in background
           try {
-            profileData = await fetchUserProfileAndStore(session.user.id);
-            
-            if (!profileData) {
+            const freshProfile = await fetchUserProfileAndStore(session.user.id);
+            if (freshProfile) {
+              profileData = freshProfile;
+              // Cache the profile for faster subsequent loads
+              localStorage.setItem(`profile_${session.user.id}`, JSON.stringify(freshProfile));
+              
+              // Only show success if we didn't have cached data
+              if (!cachedProfile) {
+                toast.success('Profile loaded successfully');
+              }
+              
+              // Cache the role immediately for faster subsequent checks
+              if (freshProfile.role) {
+                localStorage.setItem('cached_user_role', freshProfile.role);
+                authLogger.debug('Cached user role during login', { role: freshProfile.role });
+              }
+            } else {
               authLogger.warn('Profile not found for authenticated user, but keeping session', { userId: session.user.id });
-              // Don't sign out - just keep the user logged in without profile
-              setProfile(null);
+              // Clear cached role if profile fails to load
+              localStorage.removeItem('cached_user_role');
+              if (!cachedProfile) {
+                setProfile(null);
+              }
             }
           } catch (profileError) {
                // Check if the error is due to invalid refresh token
@@ -449,6 +417,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                  // Clear storage and sign out
                  localStorage.removeItem('supabase.auth.token');
                  localStorage.removeItem('sb-ysmzgrtfxbtqkaeltoug-auth-token');
+                 localStorage.removeItem('cached_user_role');
                  
                  await supabase.auth.signOut();
                  setUser(null);
@@ -458,8 +427,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                }
                
                authLogger.error('Profile fetch failed during auth state change, but keeping session', profileError as Error, { userId: session.user.id });
-               // Don't sign out - just keep the user logged in without profile
-               setProfile(null);
+               // Clear cached role if profile fails to load
+               localStorage.removeItem('cached_user_role');
+               
+               // If we have cached data, continue with that
+               if (!profileData) {
+                 toast.error('Failed to load profile data', {
+                   description: 'Please try refreshing the page'
+                 });
+                 setProfile(null);
+               }
              }
 
           // Handle driver application status check asynchronously to not block sign-in
@@ -532,26 +509,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const isAdmin = () => {
-    // Check current profile first
+    // Check current profile first - this is the most reliable source
     if (profile?.role === 'admin') {
-      // Cache the admin status for quick access during refresh
-      localStorage.setItem('cached_user_role', 'admin');
+      authLogger.debug('isAdmin check - profile loaded, user is admin', { profileRole: profile.role });
       return true;
     }
     
     // If profile is temporarily null but user exists, check cached role
+    // This handles the case during page refresh when session is restored but profile is still loading
     if (user && !profile) {
       const cachedRole = localStorage.getItem('cached_user_role');
       const result = cachedRole === 'admin';
-      authLogger.debug('isAdmin check using cached role', { cachedRole, isAdmin: result, userExists: !!user });
+      authLogger.debug('isAdmin check using cached role during profile loading', { 
+        cachedRole, 
+        isAdmin: result, 
+        userExists: !!user, 
+        profileExists: !!profile,
+        loading,
+        initialized
+      });
       return result;
     }
     
-    // If we reach here, user is not admin
-    // Clear any cached admin role
-    localStorage.removeItem('cached_user_role');
-    
-    authLogger.debug('isAdmin check - not admin', { profileRole: profile?.role, isAdmin: false, profileExists: !!profile });
+    // If we reach here, either no user or profile loaded and not admin
+    authLogger.debug('isAdmin check - not admin', { 
+      profileRole: profile?.role, 
+      isAdmin: false, 
+      profileExists: !!profile, 
+      userExists: !!user,
+      loading,
+      initialized
+    });
     return false;
   };
   const isMerchant = () => profile?.role === 'store_owner';
@@ -638,10 +626,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};

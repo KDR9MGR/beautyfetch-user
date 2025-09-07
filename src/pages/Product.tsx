@@ -19,7 +19,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 import { Tables } from '@/integrations/supabase/types';
 
 type ProductWithDetails = Tables<'products'> & {
@@ -342,4 +342,4 @@ const Product = () => {
   );
 };
 
-export default Product; 
+export default Product;

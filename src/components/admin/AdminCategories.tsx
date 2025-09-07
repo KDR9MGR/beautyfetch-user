@@ -15,6 +15,23 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, ChevronDown, ChevronRight, Package, Eye } from "lucide-react";
 import React from "react";
 
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  price: number;
+  sale_price?: number | null;
+  sku?: string | null;
+  stock_quantity: number;
+  image_url?: string | null;
+  status: 'active' | 'inactive' | 'draft';
+  store_id: string;
+  category_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -27,7 +44,7 @@ interface Category {
   created_at: string;
   updated_at: string;
   subcategories?: Category[];
-  products?: any[];
+  products?: Product[];
 }
 
 export const AdminCategories = () => {

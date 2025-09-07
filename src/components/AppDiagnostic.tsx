@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
+import { Session } from '@supabase/supabase-js';
 
 interface DiagnosticInfo {
   timestamp: string;
   supabaseConnection: 'success' | 'error' | 'testing';
   environmentVariables: Record<string, string | undefined>;
-  authState: any;
+  authState: Session | null;
   errors: string[];
 }
 

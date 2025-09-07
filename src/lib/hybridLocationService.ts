@@ -2,7 +2,7 @@
 // Intelligently switches between Google Maps API and Mock data
 
 import { toast } from '@/components/ui/sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.ts';
 
 // Google Maps Service
 import {

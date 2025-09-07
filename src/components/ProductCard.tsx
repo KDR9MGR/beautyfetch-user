@@ -38,7 +38,7 @@ export function ProductCard({ product }: ProductCardProps) {
     <Link to={`/product/${product.slug}`} className="product-card block group">
       <div className="relative aspect-square overflow-hidden">
         <img
-          src={primaryImage ? (typeof primaryImage === 'string' ? primaryImage : (primaryImage as any)?.image_url) : "https://images.unsplash.com/photo-1596462502278-27bfdc403348?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80"}
+          src={primaryImage ? (typeof primaryImage === 'string' ? primaryImage : (primaryImage as Tables<'product_images'>)?.image_url) : "https://images.unsplash.com/photo-1596462502278-27bfdc403348?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80"}
           alt={product.name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
