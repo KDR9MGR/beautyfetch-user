@@ -75,14 +75,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authLogger.debug('Fetching user profile and store data', { userId });
     
     try {
-      // PERFORMANCE OPTIMIZATION: Fetch complete profile data in one query
+      // PERFORMANCE OPTIMIZATION: Fetch complete profile data in one query with timeout
       // This reduces the number of database calls and improves login speed
-      // Removed artificial timeout - let Supabase handle connection timeouts naturally
-      const { data: profileData, error: profileError } = await supabase
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+      
+      // Add timeout to prevent hanging requests
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+      );
+      
+      const { data: profileData, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]) as any;
         
       if (profileError) {
         authLogger.error('Profile query returned error', profileError, { userId });
@@ -164,74 +173,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     let isTabVisible = true;
 
-    // Handle page visibility changes - TARGETED approach for tab switching
+    // Handle page visibility changes
     const handleVisibilityChange = () => {
-      const wasVisible = isTabVisible;
       isTabVisible = !document.hidden;
+      authLogger.debug('Tab visibility changed', { isVisible: isTabVisible });
       
-      // Only act if this is a real visibility change and we have a potential auth state issue
-      if (wasVisible === isTabVisible || !initialized) {
-        return; // Skip if no real change or not yet initialized
-      }
-      
-      authLogger.debug('Tab visibility changed', { 
-        isVisible: isTabVisible, 
-        wasVisible, 
-        hasUser: !!user, 
-        hasProfile: !!profile,
-        loading,
-        initialized 
-      });
-      
-      // ONLY check session when tab becomes visible AND there's a clear auth state inconsistency
-      if (isTabVisible && initialized && !loading) {
-        // Check if we actually have an auth state problem that needs fixing
-        const hasAuthInconsistency = (!user && !profile) || (user && !profile);
-        
-        if (hasAuthInconsistency) {
-          authLogger.debug('Tab became visible with auth inconsistency - checking session', {
-            hasUser: !!user,
-            hasProfile: !!profile
-          });
-          
-          // Use longer delay to prevent rapid-fire session checks
-          setTimeout(async () => {
-            // Double-check we still need this before making the request
-            if (!mounted || !initialized || loading) return;
-            
-            try {
-              const { data: { session }, error } = await supabase.auth.getSession();
-              
-              if (error) {
-                authLogger.warn('Session error after tab became visible', error);
-                // Only clear auth state for serious authentication errors
-                if (error.message?.includes('Invalid') || error.message?.includes('expired')) {
-                  setUser(null);
-                  setProfile(null);
-                  setUserStore(null);
-                }
-                return;
-              }
-              
-              // Only restore session if user state is null but session exists
-              if (session?.user && !user) {
-                authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
-                setUser(session.user);
-                await fetchUserProfileAndStore(session.user.id);
-              } else if (!session && user) {
-                authLogger.warn('Session lost while tab was hidden, clearing auth state');
-                setUser(null);
-                setProfile(null);
-                setUserStore(null);
-              }
-            } catch (error) {
-              authLogger.error('Error checking session after tab visibility change', error as Error);
-            }
-          }, 1000); // 1 second delay to prevent rapid checks
-        } else {
-          authLogger.debug('Tab became visible but auth state looks consistent - no session check needed');
-        }
-      }
+      // When tab becomes visible again, refresh session if needed
+       if (isTabVisible && !loading) {
+         authLogger.debug('Tab became visible, checking session validity');
+         // Small delay to ensure tab is fully active
+         setTimeout(async () => {
+           try {
+             const { data: { session }, error } = await supabase.auth.getSession();
+             
+             if (error) {
+               authLogger.warn('Session error after tab became visible', error);
+               // Don't immediately clear auth state for network errors
+               if (!error.message?.includes('Network') && !error.message?.includes('fetch')) {
+                 setUser(null);
+                 setProfile(null);
+                 setUserStore(null);
+               }
+               return;
+             }
+             
+             if (session?.user && !user) {
+               // Session exists but user state is null - restore it
+               authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
+               setUser(session.user);
+               await fetchUserProfileAndStore(session.user.id);
+             } else if (!session && user) {
+               // User state exists but no session - clear it
+               authLogger.warn('Session lost while tab was hidden, clearing auth state');
+               setUser(null);
+               setProfile(null);
+               setUserStore(null);
+             }
+           } catch (error) {
+             authLogger.error('Error checking session after tab visibility change', error as Error);
+           }
+         }, 100);
+       }
     };
 
     // Handle window focus/blur events

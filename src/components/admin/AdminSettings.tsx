@@ -109,7 +109,7 @@ export const AdminSettings = () => {
     two_factor_required_for_admin: false,
     password_expiry_days: 90,
     max_login_attempts: 5,
-    session_timeout_minutes: 120, // 120 minutes (2 hours)
+    session_timeout_minutes: 120,
     
     reviews_enabled: true,
     loyalty_program_enabled: false,
