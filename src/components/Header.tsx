@@ -24,7 +24,7 @@ const Header = () => {
         console.warn('Auth loading timeout - forcing initialization');
         setLoadingTimeout(true);
       }
-    }, 3600000); // 3600 second (1 hour) timeout
+    }, 30000); // 30 second timeout
 
     return () => clearTimeout(timer);
   }, [loading, initialized]);

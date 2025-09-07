@@ -83,9 +83,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .maybeSingle();
       
-      // Add timeout to prevent hanging requests
+      // Add timeout to prevent hanging requests - use shorter timeout for profile fetch
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 3600000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 30000)
       );
       
       const { data: profileData, error: profileError } = await Promise.race([

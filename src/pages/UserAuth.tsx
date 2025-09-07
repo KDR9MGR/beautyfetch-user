@@ -73,7 +73,7 @@ const UserAuth = () => {
           variant: "destructive",
         });
       }
-    }, 3600000); // 3600 second (1 hour) timeout
+    }, 30000); // 30 second timeout
 
     try {
       console.log('Attempting login with:', { email }); // Debug log
@@ -123,12 +123,14 @@ const UserAuth = () => {
       }
     } catch (error) {
       clearTimeout(timeoutId);
+      console.error('Login catch block error:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: `An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
+      console.log('Login finally block - setting loading to false');
       setLoading(false);
     }
   };
