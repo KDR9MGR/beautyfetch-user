@@ -499,7 +499,8 @@ export const AdminSettings = () => {
                     onChange={(e) => updateSetting('max_login_attempts', parseInt(e.target.value))}
                   />
                 </div>
-                <div>
+                {/* Session timeout disabled for now */}
+                {/* <div>
                   <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
                   <Input
                     id="sessionTimeout"
@@ -507,7 +508,7 @@ export const AdminSettings = () => {
                     value={settings.session_timeout_minutes}
                     onChange={(e) => updateSetting('session_timeout_minutes', parseInt(e.target.value))}
                   />
-                </div>
+                </div> */}
               </div>
             </CardContent>
           </Card>

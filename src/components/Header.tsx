@@ -15,23 +15,21 @@ const Header = () => {
   const { user, profile, loading, initialized, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  // Add timeout to prevent infinite loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (loading || !initialized) {
-        console.warn('Auth loading timeout - forcing initialization');
-        setLoadingTimeout(true);
-      }
-    }, 10000); // 10 second timeout
+  // Auth timeout disabled - let natural auth flow complete
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     if (loading || !initialized) {
+  //       console.warn('Auth loading timeout - forcing initialization');
+  //       setLoadingTimeout(true);
+  //     }
+  //   }, 10000);
+  //
+  //   return () => clearTimeout(timer);
+  // }, [loading, initialized]);
 
-    return () => clearTimeout(timer);
-  }, [loading, initialized]);
-
-  // Show loading state only during initial load, not when profile is temporarily missing
-  // Also respect the timeout to prevent infinite loading
-  const showLoading = (loading || !initialized) && !loadingTimeout;
+  // Show loading state during initial load
+  const showLoading = loading || !initialized;
 
   // Debug logging
   console.log('Header render:', { 

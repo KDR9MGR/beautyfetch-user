@@ -75,23 +75,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authLogger.debug('Fetching user profile and store data', { userId });
     
     try {
-      // PERFORMANCE OPTIMIZATION: Fetch complete profile data in one query with timeout
+      // PERFORMANCE OPTIMIZATION: Fetch complete profile data in one query
       // This reduces the number of database calls and improves login speed
-      const profilePromise = supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
-      
-      // Add timeout to prevent hanging requests
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
-      );
-      
-      const { data: profileData, error: profileError } = await Promise.race([
-        profilePromise,
-        timeoutPromise
-      ]) as any;
         
       if (profileError) {
         authLogger.error('Profile query returned error', profileError, { userId });
@@ -173,46 +163,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     let isTabVisible = true;
 
-    // Handle page visibility changes
+    // Handle page visibility changes - only check if there's a real issue
     const handleVisibilityChange = () => {
+      const wasVisible = isTabVisible;
       isTabVisible = !document.hidden;
-      authLogger.debug('Tab visibility changed', { isVisible: isTabVisible });
       
-      // When tab becomes visible again, refresh session if needed
-       if (isTabVisible && !loading) {
-         authLogger.debug('Tab became visible, checking session validity');
-         // Small delay to ensure tab is fully active
-         setTimeout(async () => {
-           try {
-             const { data: { session }, error } = await supabase.auth.getSession();
+      // Only log and act if this is a real change and initialization is complete
+      if (wasVisible === isTabVisible || !initialized) {
+        return;
+      }
+      
+      authLogger.debug('Tab visibility changed', { isVisible: isTabVisible, wasVisible, initialized, loading });
+      
+      // When tab becomes visible again, only check session if user state seems inconsistent
+      if (isTabVisible && !loading && initialized) {
+         // Only check session if there's a potential state inconsistency
+         // Don't run session checks if everything looks normal
+         const shouldCheckSession = !user || (!profile && user);
+         
+         if (shouldCheckSession) {
+           authLogger.debug('Tab became visible, checking session due to state inconsistency', { 
+             hasUser: !!user, 
+             hasProfile: !!profile 
+           });
+           
+           // Use a longer delay to avoid rapid-fire requests
+           setTimeout(async () => {
+             // Double check we still need this check
+             if (!mounted || !initialized) return;
              
-             if (error) {
-               authLogger.warn('Session error after tab became visible', error);
-               // Don't immediately clear auth state for network errors
-               if (!error.message?.includes('Network') && !error.message?.includes('fetch')) {
+             try {
+               const { data: { session }, error } = await supabase.auth.getSession();
+               
+               if (error) {
+                 authLogger.warn('Session error after tab became visible', error);
+                 // Only clear auth state for serious errors, not network issues
+                 if (error.message?.includes('Invalid') || error.message?.includes('expired')) {
+                   setUser(null);
+                   setProfile(null);
+                   setUserStore(null);
+                 }
+                 return;
+               }
+               
+               if (session?.user && !user) {
+                 // Session exists but user state is null - restore it
+                 authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
+                 setUser(session.user);
+                 await fetchUserProfileAndStore(session.user.id);
+               } else if (!session && user) {
+                 // User state exists but no session - clear it
+                 authLogger.warn('Session lost while tab was hidden, clearing auth state');
                  setUser(null);
                  setProfile(null);
                  setUserStore(null);
                }
-               return;
+             } catch (error) {
+               authLogger.error('Error checking session after tab visibility change', error as Error);
              }
-             
-             if (session?.user && !user) {
-               // Session exists but user state is null - restore it
-               authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
-               setUser(session.user);
-               await fetchUserProfileAndStore(session.user.id);
-             } else if (!session && user) {
-               // User state exists but no session - clear it
-               authLogger.warn('Session lost while tab was hidden, clearing auth state');
-               setUser(null);
-               setProfile(null);
-               setUserStore(null);
-             }
-           } catch (error) {
-             authLogger.error('Error checking session after tab visibility change', error as Error);
-           }
-         }, 100);
+           }, 500); // Longer delay to prevent rapid checks
+         } else {
+           authLogger.debug('Tab became visible but no session check needed - state looks consistent');
+         }
        }
     };
 
@@ -340,10 +352,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authLogger.info('Auth state change detected', { 
         event, 
         userId: session?.user?.id,
-        email: session?.user?.email 
+        email: session?.user?.email,
+        currentUser: user?.id,
+        currentLoading: loading
       });
       
-      setLoading(true);
+      // Don't set loading if we're just switching between valid sessions for the same user
+      const isSameUser = session?.user?.id === user?.id;
+      if (event === 'TOKEN_REFRESHED' && isSameUser) {
+        authLogger.debug('Token refreshed for same user, not setting loading state');
+        return;
+      }
+      
+      // Only set loading for significant auth changes
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setLoading(true);
+      }
       
       try {
         if (session?.user) {

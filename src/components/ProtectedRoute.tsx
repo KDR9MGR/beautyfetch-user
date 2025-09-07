@@ -9,26 +9,10 @@ interface ProtectedRouteProps {
 }
 
 export const AdminRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const { user, loading, initialized, isAdmin } = useAuth();
 
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        setIsAdmin(profile?.role === 'admin');
-      }
-    };
-
-    checkAdminStatus();
-  }, [user]);
-
-  if (loading || isAdmin === null) {
+  // Show loading only if not initialized or still loading
+  if (!initialized || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-beauty-purple"></div>
@@ -36,35 +20,25 @@ export const AdminRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  if (!user || !isAdmin) {
+  // If not logged in, redirect to login
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Use AuthContext's isAdmin method instead of separate DB call
+  if (!isAdmin()) {
     toast.error("You don't have admin privileges");
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
 };
 
 export const MerchantRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
-  const [isMerchant, setIsMerchant] = useState<boolean | null>(null);
+  const { user, loading, initialized, isMerchant } = useAuth();
 
-  useEffect(() => {
-    const checkMerchantStatus = async () => {
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        setIsMerchant(profile?.role === 'store_owner');
-      }
-    };
-
-    checkMerchantStatus();
-  }, [user]);
-
-  if (loading || isMerchant === null) {
+  // Show loading only if not initialized or still loading
+  if (!initialized || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-beauty-purple"></div>
@@ -72,33 +46,29 @@ export const MerchantRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  if (!user || !isMerchant) {
+  // If not logged in, redirect to merchant auth
+  if (!user) {
+    return <Navigate to="/merchant/login" replace />;
+  }
+
+  // Use AuthContext's isMerchant method instead of separate DB call
+  if (!isMerchant()) {
     toast.error("You don't have merchant privileges");
-    return <Navigate to="/merchant-auth" />;
+    return <Navigate to="/merchant/login" replace />;
   }
 
   return <>{children}</>;
 };
 
 export const DriverRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
-  const [isDriver, setIsDriver] = useState<boolean | null>(null);
+  const { user, loading, initialized, isDriver } = useAuth();
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkDriverStatus = async () => {
-      if (user) {
-        // Check profile role
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        setIsDriver(profile?.role === 'driver');
-
-        // If not a driver, check application status
-        if (profile?.role !== 'driver') {
+    // Only check application status if user exists but is not a driver
+    const checkApplicationStatus = async () => {
+      if (user && initialized && !isDriver()) {
+        try {
           const { data: application } = await supabase
             .from('driver_applications')
             .select('status')
@@ -106,14 +76,20 @@ export const DriverRoute = ({ children }: ProtectedRouteProps) => {
             .single();
 
           setApplicationStatus(application?.status || null);
+        } catch (error) {
+          console.log('No driver application found');
+          setApplicationStatus(null);
         }
       }
     };
 
-    checkDriverStatus();
-  }, [user]);
+    if (initialized) {
+      checkApplicationStatus();
+    }
+  }, [user, initialized, isDriver]);
 
-  if (loading || isDriver === null) {
+  // Show loading only if not initialized or still loading
+  if (!initialized || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -121,11 +97,13 @@ export const DriverRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
+  // If not logged in, redirect to driver auth
   if (!user) {
-    return <Navigate to="/driver-auth" />;
+    return <Navigate to="/driver/login" replace />;
   }
 
-  if (!isDriver) {
+  // Use AuthContext's isDriver method instead of separate DB call
+  if (!isDriver()) {
     switch (applicationStatus) {
       case 'pending':
         toast.info("Your application is pending review. We'll notify you once it's approved.");
@@ -143,7 +121,7 @@ export const DriverRoute = ({ children }: ProtectedRouteProps) => {
         toast.error("You don't have driver privileges");
         break;
     }
-    return <Navigate to="/driver-auth" />;
+    return <Navigate to="/driver/login" replace />;
   }
 
   return <>{children}</>;

@@ -63,17 +63,17 @@ const UserAuth = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Add timeout to prevent hanging
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        toast({
-          title: "Login Timeout",
-          description: "Login is taking too long. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }, 15000); // 15 second timeout
+    // Timeout disabled - let Supabase handle connection timeouts naturally
+    // const timeoutId = setTimeout(() => {
+    //   if (loading) {
+    //     setLoading(false);
+    //     toast({
+    //       title: "Login Timeout", 
+    //       description: "Login is taking too long. Please try again.",
+    //       variant: "destructive",
+    //     });
+    //   }
+    // }, 15000);
 
     try {
       console.log('Attempting login with:', { email }); // Debug log
