@@ -183,54 +183,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         initialized 
       });
       
-      // ONLY check session when tab becomes visible AND there's a clear auth state inconsistency
+      // When tab becomes visible again, check session if we might need to restore it
       if (isTabVisible && initialized && !loading) {
-        // Check if we actually have an auth state problem that needs fixing
-        const hasAuthInconsistency = (!user && !profile) || (user && !profile);
+        authLogger.debug('Tab became visible, checking if session restoration is needed', {
+          hasUser: !!user,
+          hasProfile: !!profile
+        });
         
-        if (hasAuthInconsistency) {
-          authLogger.debug('Tab became visible with auth inconsistency - checking session', {
-            hasUser: !!user,
-            hasProfile: !!profile
-          });
+        // Use a reasonable delay to prevent rapid-fire session checks
+        setTimeout(async () => {
+          // Double-check we still need this before making the request
+          if (!mounted || !initialized || loading) return;
           
-          // Use longer delay to prevent rapid-fire session checks
-          setTimeout(async () => {
-            // Double-check we still need this before making the request
-            if (!mounted || !initialized || loading) return;
+          try {
+            const { data: { session }, error } = await supabase.auth.getSession();
             
-            try {
-              const { data: { session }, error } = await supabase.auth.getSession();
-              
-              if (error) {
-                authLogger.warn('Session error after tab became visible', error);
-                // Only clear auth state for serious authentication errors
-                if (error.message?.includes('Invalid') || error.message?.includes('expired')) {
-                  setUser(null);
-                  setProfile(null);
-                  setUserStore(null);
-                }
-                return;
-              }
-              
-              // Only restore session if user state is null but session exists
-              if (session?.user && !user) {
-                authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
-                setUser(session.user);
-                await fetchUserProfileAndStore(session.user.id);
-              } else if (!session && user) {
-                authLogger.warn('Session lost while tab was hidden, clearing auth state');
+            if (error) {
+              authLogger.warn('Session error after tab became visible', error);
+              // Only clear auth state for serious authentication errors
+              if (error.message?.includes('Invalid') || error.message?.includes('expired')) {
                 setUser(null);
                 setProfile(null);
                 setUserStore(null);
               }
-            } catch (error) {
-              authLogger.error('Error checking session after tab visibility change', error as Error);
+              return;
             }
-          }, 1000); // 1 second delay to prevent rapid checks
-        } else {
-          authLogger.debug('Tab became visible but auth state looks consistent - no session check needed');
-        }
+            
+            // Restore session if user state is null but session exists
+            if (session?.user && !user) {
+              authLogger.info('Restoring session after tab became visible', { userId: session.user.id });
+              setUser(session.user);
+              await fetchUserProfileAndStore(session.user.id);
+            } else if (!session && user) {
+              // User state exists but no session - clear it
+              authLogger.warn('Session lost while tab was hidden, clearing auth state');
+              setUser(null);
+              setProfile(null);
+              setUserStore(null);
+            } else {
+              authLogger.debug('Tab visibility check - no session changes needed', {
+                hasSession: !!session?.user,
+                hasUser: !!user
+              });
+            }
+          } catch (error) {
+            authLogger.error('Error checking session after tab visibility change', error as Error);
+          }
+        }, 1000); // 1 second delay to prevent rapid checks
       }
     };
 
