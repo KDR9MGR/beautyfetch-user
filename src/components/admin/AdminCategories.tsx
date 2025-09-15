@@ -65,7 +65,7 @@ export const AdminCategories = () => {
     slug: "",
     description: "",
     image_url: "",
-    parent_id: "",
+    parent_id: "none",
     is_active: true,
     sort_order: 0,
   });
@@ -249,7 +249,7 @@ export const AdminCategories = () => {
 
       const categoryData = {
         ...formData,
-        parent_id: formData.parent_id || null,
+        parent_id: formData.parent_id === "none" || !formData.parent_id ? null : formData.parent_id,
         name: formData.name.trim(),
         slug: formData.slug.trim(),
         description: formData.description.trim() || null,
@@ -344,7 +344,7 @@ export const AdminCategories = () => {
       slug: "",
       description: "",
       image_url: "",
-      parent_id: "",
+      parent_id: "none",
       is_active: true,
       sort_order: 0,
     });
@@ -359,7 +359,7 @@ export const AdminCategories = () => {
       slug: category.slug,
       description: category.description || "",
       image_url: category.image_url || "",
-      parent_id: category.parent_id || "",
+      parent_id: category.parent_id || "none",
       is_active: category.is_active,
       sort_order: category.sort_order,
     });
@@ -552,7 +552,7 @@ export const AdminCategories = () => {
                     <SelectValue placeholder="Select parent category (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None (Root Category)</SelectItem>
+                    <SelectItem value="none">None (Root Category)</SelectItem>
                     {getParentCategoryOptions()
                       .filter(cat => cat.id !== editingCategory?.id) // Prevent circular reference
                       .map(cat => (
