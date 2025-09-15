@@ -35,12 +35,45 @@ export function ProductsGrid() {
   }
 
   const handleAddToCart = (product: FeaturedProduct) => {
-    // Transform the product data to match what cart expects
-    const transformedProduct: Tables<'products'> & { 
-      store: Tables<'stores'>; 
-      images: Tables<'product_images'>[] 
-    } = {
-      ...product,
+    // Create a completely new object matching cart expectations
+    const transformedProduct = {
+      // Copy all product properties manually to avoid type conflicts
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      short_description: product.short_description,
+      price: product.price,
+      compare_price: product.compare_price,
+      cost_price: product.cost_price,
+      cost_per_item: product.cost_per_item,
+      sku: product.sku,
+      barcode: product.barcode,
+      inventory_quantity: product.inventory_quantity,
+      track_inventory: product.track_inventory,
+      continue_selling_when_out_of_stock: product.continue_selling_when_out_of_stock,
+      weight: product.weight,
+      dimensions: product.dimensions,
+      status: product.status,
+      featured: product.featured,
+      tags: product.tags,
+      meta_title: product.meta_title,
+      meta_description: product.meta_description,
+      margin_percentage: product.margin_percentage,
+      store_id: product.store_id,
+      category_id: product.category_id,
+      created_at: product.created_at,
+      updated_at: product.updated_at,
+      // Transform images from product_images to the expected images array
+      images: (product.product_images || []).map((img, index) => ({
+        id: `${product.id}_${index}`,
+        product_id: product.id,
+        image_url: img.image_url,
+        alt_text: img.alt_text,
+        is_primary: img.is_primary,
+        sort_order: img.is_primary ? 0 : index + 1,
+        created_at: new Date().toISOString()
+      })) as Tables<'product_images'>[],
       store: {
         id: product.stores?.id || 'unknown',
         name: product.stores?.name || 'Unknown Store',
@@ -58,16 +91,10 @@ export function ProductsGrid() {
         owner_id: '',
         rating: 0,
         total_reviews: 0
-      } as Tables<'stores'>,
-      images: (product.product_images || []).map((img) => ({
-        id: `${product.id}_${img.image_url}`,
-        product_id: product.id,
-        image_url: img.image_url,
-        alt_text: img.alt_text,
-        is_primary: img.is_primary,
-        sort_order: img.is_primary ? 0 : 1,
-        created_at: new Date().toISOString()
-      })) as Tables<'product_images'>[]
+      } as Tables<'stores'>
+    } as Tables<'products'> & { 
+      store: Tables<'stores'>; 
+      images: Tables<'product_images'>[] 
     };
     
     addToCart(transformedProduct, 1);

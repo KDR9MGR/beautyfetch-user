@@ -3,19 +3,27 @@ import { supabase } from '@/integrations/supabase/client.ts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthResponse, AuthError } from '@supabase/supabase-js';
+import { AuthResponse, AuthError, PostgrestError } from '@supabase/supabase-js';
 
 interface TestResult {
   healthCheck?: {
     data: unknown;
-    error: AuthError | null;
+    error: PostgrestError | null;
   };
   authTest?: {
-    data: AuthResponse;
+    data: {
+      user: any;
+      session: any;
+      weakPassword?: any;
+    } | null;
     error: AuthError | null;
   };
   signupTest?: {
-    data: AuthResponse;
+    data: {
+      user: any;
+      session: any;
+      weakPassword?: any;
+    } | null;
     error: AuthError | null;
   };
   error?: string;
