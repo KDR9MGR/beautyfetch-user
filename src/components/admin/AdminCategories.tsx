@@ -52,8 +52,10 @@ export const AdminCategories = () => {
   const [hierarchicalCategories, setHierarchicalCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [subCategoryDialogOpen, setSubCategoryDialogOpen] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [isSubCategoryMode, setIsSubCategoryMode] = useState(false);
   const [viewingCategoryProducts, setViewingCategoryProducts] = useState<Category | null>(null);
   const [categoryProducts, setCategoryProducts] = useState<any[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -244,6 +246,16 @@ export const AdminCategories = () => {
       return;
     }
 
+    // For subcategories, parent is required
+    if (isSubCategoryMode && (!formData.parent_id || formData.parent_id === "none")) {
+      toast({
+        title: "Validation Error",
+        description: "Parent category is required for subcategories",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
 
@@ -278,6 +290,7 @@ export const AdminCategories = () => {
           description: `Category ${editingCategory ? "updated" : "created"} successfully`,
         });
         setDialogOpen(false);
+        setSubCategoryDialogOpen(false);
         resetForm();
         fetchCategories();
       }
@@ -344,16 +357,18 @@ export const AdminCategories = () => {
       slug: "",
       description: "",
       image_url: "",
-      parent_id: "none",
+      parent_id: isSubCategoryMode ? "" : "none",
       is_active: true,
       sort_order: 0,
     });
     setEditingCategory(null);
+    setIsSubCategoryMode(false);
   };
 
   const openEditDialog = (category: Category) => {
     console.log('Opening edit dialog for category:', category);
     setEditingCategory(category);
+    setIsSubCategoryMode(false);
     setFormData({
       name: category.name,
       slug: category.slug,
@@ -364,6 +379,18 @@ export const AdminCategories = () => {
       sort_order: category.sort_order,
     });
     setDialogOpen(true);
+  };
+
+  const openAddCategoryDialog = () => {
+    setIsSubCategoryMode(false);
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const openAddSubCategoryDialog = () => {
+    setIsSubCategoryMode(true);
+    resetForm();
+    setSubCategoryDialogOpen(true);
   };
 
   const openProductDialog = async (category: Category) => {
@@ -490,156 +517,302 @@ export const AdminCategories = () => {
           <h2 className="text-2xl font-bold">Categories Management</h2>
           <p className="text-gray-600">Manage product categories and subcategories</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          console.log('Dialog open state changed:', open);
-          setDialogOpen(open);
-          if (!open) {
-            resetForm(); // Reset form when dialog closes
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
-              console.log('Add Category button clicked');
+        <div className="flex space-x-2">
+          {/* Add Category Dialog - Root categories only */}
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            console.log('Dialog open state changed:', open);
+            setDialogOpen(open);
+            if (!open) {
               resetForm();
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Category
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-white border shadow-lg z-50">
-            <DialogHeader>
-              <DialogTitle>
-                {editingCategory ? "Edit Category" : "Add New Category"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 p-1">
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  required
-                  placeholder="Enter category name"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="slug">Slug *</Label>
-                <Input
-                  id="slug"
-                  value={formData.slug}
-                  onChange={(e) =>
-                    setFormData({ ...formData, slug: e.target.value })
-                  }
-                  required
-                  placeholder="category-slug"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Auto-generated from name, but you can customize it
-                </p>
-              </div>
-              
-              <div>
-                <Label htmlFor="parent">Parent Category</Label>
-                <Select 
-                  value={formData.parent_id} 
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, parent_id: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select parent category (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None (Root Category)</SelectItem>
-                    {getParentCategoryOptions()
-                      .filter(cat => cat.id !== editingCategory?.id) // Prevent circular reference
-                      .map(cat => (
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={openAddCategoryDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Category
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-white border shadow-lg z-50">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCategory ? "Edit Category" : "Add New Category"}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4 p-1">
+                <div>
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    required
+                    placeholder="Enter category name"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="slug">Slug *</Label>
+                  <Input
+                    id="slug"
+                    value={formData.slug}
+                    onChange={(e) =>
+                      setFormData({ ...formData, slug: e.target.value })
+                    }
+                    required
+                    placeholder="category-slug"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Auto-generated from name, but you can customize it
+                  </p>
+                </div>
+                
+                {/* Hide parent selection for root categories unless editing */}
+                {editingCategory && (
+                  <div>
+                    <Label htmlFor="parent">Parent Category</Label>
+                    <Select 
+                      value={formData.parent_id} 
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, parent_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select parent category (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None (Root Category)</SelectItem>
+                        {getParentCategoryOptions()
+                          .filter(cat => cat.id !== editingCategory?.id)
+                          .map(cat => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </SelectItem>
+                          ))
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Enter category description"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="image_url">Image URL</Label>
+                  <Input
+                    id="image_url"
+                    value={formData.image_url}
+                    onChange={(e) =>
+                      setFormData({ ...formData, image_url: e.target.value })
+                    }
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="sort_order">Sort Order</Label>
+                  <Input
+                    id="sort_order"
+                    type="number"
+                    value={formData.sort_order}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })
+                    }
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={(e) =>
+                      setFormData({ ...formData, is_active: e.target.checked })
+                    }
+                  />
+                  <Label htmlFor="is_active">Active</Label>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setDialogOpen(false);
+                      resetForm();
+                    }}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        {editingCategory ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      editingCategory ? "Update" : "Create"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Sub Category Dialog - Requires parent selection */}
+          <Dialog open={subCategoryDialogOpen} onOpenChange={(open) => {
+            setSubCategoryDialogOpen(open);
+            if (!open) {
+              resetForm();
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={openAddSubCategoryDialog} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Sub Category
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-white border shadow-lg z-50">
+              <DialogHeader>
+                <DialogTitle>Add New Sub Category</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4 p-1">
+                <div>
+                  <Label htmlFor="sub-name">Name *</Label>
+                  <Input
+                    id="sub-name"
+                    value={formData.name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    required
+                    placeholder="Enter subcategory name"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="sub-slug">Slug *</Label>
+                  <Input
+                    id="sub-slug"
+                    value={formData.slug}
+                    onChange={(e) =>
+                      setFormData({ ...formData, slug: e.target.value })
+                    }
+                    required
+                    placeholder="subcategory-slug"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Auto-generated from name, but you can customize it
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="sub-parent">Parent Category *</Label>
+                  <Select 
+                    value={formData.parent_id} 
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, parent_id: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select parent category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getParentCategoryOptions().map(cat => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
                         </SelectItem>
-                      ))
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="sub-description">Description</Label>
+                  <Textarea
+                    id="sub-description"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
                     }
-                  </SelectContent>
-                </Select>
-              </div>
+                    placeholder="Enter subcategory description"
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Enter category description"
-                />
-              </div>
+                <div>
+                  <Label htmlFor="sub-image_url">Image URL</Label>
+                  <Input
+                    id="sub-image_url"
+                    value={formData.image_url}
+                    onChange={(e) =>
+                      setFormData({ ...formData, image_url: e.target.value })
+                    }
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="image_url">Image URL</Label>
-                <Input
-                  id="image_url"
-                  value={formData.image_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, image_url: e.target.value })
-                  }
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
+                <div>
+                  <Label htmlFor="sub-sort_order">Sort Order</Label>
+                  <Input
+                    id="sub-sort_order"
+                    type="number"
+                    value={formData.sort_order}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })
+                    }
+                    placeholder="0"
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="sort_order">Sort Order</Label>
-                <Input
-                  id="sort_order"
-                  type="number"
-                  value={formData.sort_order}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })
-                  }
-                  placeholder="0"
-                />
-              </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="sub-is_active"
+                    checked={formData.is_active}
+                    onChange={(e) =>
+                      setFormData({ ...formData, is_active: e.target.checked })
+                    }
+                  />
+                  <Label htmlFor="sub-is_active">Active</Label>
+                </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) =>
-                    setFormData({ ...formData, is_active: e.target.checked })
-                  }
-                />
-                <Label htmlFor="is_active">Active</Label>
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setDialogOpen(false);
-                    resetForm();
-                  }}
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      {editingCategory ? "Updating..." : "Creating..."}
-                    </>
-                  ) : (
-                    editingCategory ? "Update" : "Create"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setSubCategoryDialogOpen(false);
+                      resetForm();
+                    }}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Sub Category"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Products Dialog */}
