@@ -221,6 +221,7 @@ export const AdminCategories = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted', formData);
 
     if (submitting) return;
 
@@ -351,6 +352,7 @@ export const AdminCategories = () => {
   };
 
   const openEditDialog = (category: Category) => {
+    console.log('Opening edit dialog for category:', category);
     setEditingCategory(category);
     setFormData({
       name: category.name,
@@ -489,24 +491,28 @@ export const AdminCategories = () => {
           <p className="text-gray-600">Manage product categories and subcategories</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
+          console.log('Dialog open state changed:', open);
           setDialogOpen(open);
           if (!open) {
             resetForm(); // Reset form when dialog closes
           }
         }}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm}>
+            <Button onClick={() => {
+              console.log('Add Category button clicked');
+              resetForm();
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Add Category
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-white border shadow-lg z-50">
             <DialogHeader>
               <DialogTitle>
                 {editingCategory ? "Edit Category" : "Add New Category"}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 p-1">
               <div>
                 <Label htmlFor="name">Name *</Label>
                 <Input
@@ -638,7 +644,7 @@ export const AdminCategories = () => {
 
       {/* Products Dialog */}
       <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl bg-white border shadow-lg z-50">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Package className="h-5 w-5" />
