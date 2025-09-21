@@ -60,7 +60,7 @@ interface Category {
 interface Subcategory {
   id: string;
   name: string;
-  category_id: string;
+  parent_id: string;
 }
 
 export const AdminCatalog = () => {
@@ -107,7 +107,7 @@ export const AdminCatalog = () => {
           *,
           category:categories(id, name)
         `)
-        .eq('store_id', 'catalog')
+        .is('store_id', null) // Catalog products have null store_id
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -165,11 +165,7 @@ export const AdminCatalog = () => {
       if (subcategoriesError) throw subcategoriesError;
 
       setCategories(categoriesData || []);
-      setSubcategories((subcategoriesData || []).map(sub => ({
-        id: sub.id,
-        name: sub.name,
-        category_id: sub.parent_id
-      })));
+      setSubcategories(subcategoriesData || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast({
@@ -201,7 +197,7 @@ export const AdminCatalog = () => {
         variants: formData.variants,
         price: 0, // Default price for catalog products
         slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
-        store_id: 'catalog' // Special store_id for catalog products
+        store_id: null // Catalog products have null store_id
       };
 
       if (editingProduct) {
@@ -336,7 +332,7 @@ export const AdminCatalog = () => {
   );
 
   const getSubcategoriesForCategory = (categoryId: string) => {
-    return subcategories.filter(sub => sub.category_id === categoryId);
+    return subcategories.filter(sub => sub.parent_id === categoryId);
   };
 
   if (loading) {
