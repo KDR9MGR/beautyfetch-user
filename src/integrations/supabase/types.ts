@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1719,6 +1719,7 @@ export type Database = {
           slug: string
           status: Database["public"]["Enums"]["product_status"] | null
           store_id: string
+          subcategory_id: string | null
           tags: string[] | null
           track_inventory: boolean | null
           updated_at: string | null
@@ -1748,6 +1749,7 @@ export type Database = {
           slug: string
           status?: Database["public"]["Enums"]["product_status"] | null
           store_id: string
+          subcategory_id?: string | null
           tags?: string[] | null
           track_inventory?: boolean | null
           updated_at?: string | null
@@ -1777,6 +1779,7 @@ export type Database = {
           slug?: string
           status?: Database["public"]["Enums"]["product_status"] | null
           store_id?: string
+          subcategory_id?: string | null
           tags?: string[] | null
           track_inventory?: boolean | null
           updated_at?: string | null
@@ -1802,6 +1805,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
         ]

@@ -165,7 +165,6 @@ export const AdminCatalog = () => {
       if (subcategoriesError) throw subcategoriesError;
 
       setCategories(categoriesData || []);
-      console.log('Fetched subcategories:', subcategoriesData);
       setSubcategories(subcategoriesData || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -334,9 +333,7 @@ export const AdminCatalog = () => {
   );
 
   const getSubcategoriesForCategory = (categoryId: string) => {
-    const filtered = subcategories.filter(sub => sub.parent_id === categoryId);
-    console.log('Filtering subcategories for category:', categoryId, 'Found:', filtered);
-    return filtered;
+    return subcategories.filter(sub => sub.parent_id === categoryId);
   };
 
   if (loading) {
