@@ -146,16 +146,30 @@ export const AdminCatalog = () => {
 
   const fetchCategories = async () => {
     try {
+      // Fetch main categories (parent_id is null)
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
+        .is('parent_id', null)
         .order('name');
 
       if (categoriesError) throw categoriesError;
 
+      // Fetch subcategories (parent_id is not null)
+      const { data: subcategoriesData, error: subcategoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .not('parent_id', 'is', null)
+        .order('name');
+
+      if (subcategoriesError) throw subcategoriesError;
+
       setCategories(categoriesData || []);
-      // For now, use empty array since subcategories table doesn't exist yet
-      setSubcategories([]);
+      setSubcategories((subcategoriesData || []).map(sub => ({
+        id: sub.id,
+        name: sub.name,
+        category_id: sub.parent_id
+      })));
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast({
