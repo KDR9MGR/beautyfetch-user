@@ -165,6 +165,7 @@ export const AdminCatalog = () => {
       if (subcategoriesError) throw subcategoriesError;
 
       setCategories(categoriesData || []);
+      console.log('Fetched subcategories:', subcategoriesData);
       setSubcategories(subcategoriesData || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -194,6 +195,7 @@ export const AdminCatalog = () => {
         image_url: formData.photo,
         description: formData.description,
         category_id: formData.category_id,
+        ...(formData.subcategory_id && { subcategory_id: formData.subcategory_id }), // Only include if not empty
         variants: formData.variants,
         price: 0, // Default price for catalog products
         slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
@@ -332,7 +334,9 @@ export const AdminCatalog = () => {
   );
 
   const getSubcategoriesForCategory = (categoryId: string) => {
-    return subcategories.filter(sub => sub.parent_id === categoryId);
+    const filtered = subcategories.filter(sub => sub.parent_id === categoryId);
+    console.log('Filtering subcategories for category:', categoryId, 'Found:', filtered);
+    return filtered;
   };
 
   if (loading) {
