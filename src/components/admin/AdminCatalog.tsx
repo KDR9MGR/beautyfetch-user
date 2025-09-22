@@ -425,12 +425,19 @@ export const AdminCatalog = () => {
                 <div className="space-y-2">
                   <Label htmlFor="subcategory">Subcategory</Label>
                   <Select
+                    key={formData.category_id} // Force re-render when category changes
                     value={formData.subcategory_id}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory_id: value }))}
                     disabled={!formData.category_id}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select subcategory" />
+                      <SelectValue placeholder={
+                        !formData.category_id 
+                          ? "Select category first" 
+                          : getSubcategoriesForCategory(formData.category_id).length === 0
+                          ? "No subcategories available"
+                          : "Select subcategory"
+                      } />
                     </SelectTrigger>
                     <SelectContent>
                       {getSubcategoriesForCategory(formData.category_id).map((subcategory) => (
