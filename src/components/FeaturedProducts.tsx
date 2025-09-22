@@ -27,7 +27,7 @@ export function FeaturedProducts() {
             *,
             store:stores(*),
             images:product_images(*),
-            category:categories(*)
+            category:categories!products_category_id_fkey(*)
           `)
           .eq('status', 'active')
           .limit(20);

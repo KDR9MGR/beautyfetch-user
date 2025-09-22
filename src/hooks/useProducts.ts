@@ -15,7 +15,7 @@ export const useProducts = () => {
             slug,
             logo_url
           ),
-          categories (
+          categories!products_category_id_fkey (
             name,
             slug
           ),
@@ -49,7 +49,7 @@ export const useFeaturedProducts = () => {
             slug,
             logo_url
           ),
-          categories (
+          categories!products_category_id_fkey (
             name,
             slug
           ),

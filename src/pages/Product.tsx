@@ -50,7 +50,7 @@ const Product = () => {
             *,
             store:stores(*),
             images:product_images(*),
-            category:categories(*)
+            category:categories!products_category_id_fkey(*)
           `)
           .eq('slug', slug)
           .eq('status', 'active')
