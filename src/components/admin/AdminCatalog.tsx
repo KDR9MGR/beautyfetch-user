@@ -107,7 +107,7 @@ export const AdminCatalog = () => {
           *,
           category:categories!products_category_id_fkey(id, name)
         `)
-        .is('store_id', null) // Catalog products have null store_id
+        .eq('store_id', '687318ed-ebda-478a-9616-e8bd88cb710b') // Catalog products from admin store
         .order('created_at', { ascending: false });
 
       if (error) throw error;
