@@ -189,16 +189,7 @@ export const AdminCatalog = () => {
     }
 
     try {
-      // Get the first store owned by the admin for catalog products
-      const { data: adminStore, error: storeError } = await supabase
-        .from('stores')
-        .select('id')
-        .limit(1)
-        .single();
-
-      if (storeError || !adminStore) {
-        throw new Error('Admin store not found');
-      }
+      console.log('Starting product save...');
 
       const productData = {
         name: formData.name,
@@ -206,30 +197,39 @@ export const AdminCatalog = () => {
         description: formData.description,
         category_id: formData.category_id,
         ...(formData.subcategory_id && { subcategory_id: formData.subcategory_id }),
-        variants: formData.variants,
-        price: 0, // Default price for catalog products
+        price: 0,
         slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
-        store_id: adminStore.id // Use admin's store for catalog products
+        store_id: '687318ed-ebda-478a-9616-e8bd88cb710b' // Use known store ID
       };
 
+      console.log('Product data:', productData);
+
       if (editingProduct) {
+        console.log('Updating product:', editingProduct.id);
         const { error } = await supabase
           .from('products')
           .update(productData)
           .eq('id', editingProduct.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
 
         toast({
           title: "Success",
           description: "Product updated successfully",
         });
       } else {
+        console.log('Inserting new product...');
         const { error } = await supabase
           .from('products')
           .insert([productData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
 
         toast({
           title: "Success",
