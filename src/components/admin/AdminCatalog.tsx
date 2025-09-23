@@ -189,16 +189,27 @@ export const AdminCatalog = () => {
     }
 
     try {
+      // Get the first store owned by the admin for catalog products
+      const { data: adminStore, error: storeError } = await supabase
+        .from('stores')
+        .select('id')
+        .limit(1)
+        .single();
+
+      if (storeError || !adminStore) {
+        throw new Error('Admin store not found');
+      }
+
       const productData = {
         name: formData.name,
         image_url: formData.photo,
         description: formData.description,
         category_id: formData.category_id,
-        ...(formData.subcategory_id && { subcategory_id: formData.subcategory_id }), // Only include if not empty
+        ...(formData.subcategory_id && { subcategory_id: formData.subcategory_id }),
         variants: formData.variants,
         price: 0, // Default price for catalog products
         slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
-        store_id: null // Catalog products have null store_id
+        store_id: adminStore.id // Use admin's store for catalog products
       };
 
       if (editingProduct) {
