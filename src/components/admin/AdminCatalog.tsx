@@ -105,7 +105,7 @@ export const AdminCatalog = () => {
         .from('products')
         .select(`
           *,
-          category:categories(id, name)
+          category:categories!products_category_id_fkey(id, name)
         `)
         .is('store_id', null) // Catalog products have null store_id
         .order('created_at', { ascending: false });
@@ -116,7 +116,7 @@ export const AdminCatalog = () => {
       const transformedData = (data || []).map((product: any) => ({
         id: product.id,
         name: product.name,
-        photo: product.image_url || '',
+        photo: product.images?.[0] || '',
         description: product.description || '',
         category_id: product.category_id,
         subcategory_id: product.subcategory_id,
@@ -202,7 +202,7 @@ export const AdminCatalog = () => {
 
       const productData = {
         name: formData.name,
-        image_url: formData.photo,
+        images: [formData.photo],
         description: formData.description,
         category_id: formData.category_id,
         ...(formData.subcategory_id && { subcategory_id: formData.subcategory_id }),
