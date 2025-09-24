@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Eye, Clock, Users, DollarSign, BarChart3, Store, MapPin, Search, Upload, Download, FileSpreadsheet, CheckCircle } from "lucide-react";
+import { generateSlug } from "@/utils/slugUtils";
 
 interface StoreHours {
   day: string;
@@ -424,17 +425,25 @@ export const AdminStores = () => {
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        onChange={(e) => {
+                          const newName = e.target.value;
+                          setFormData({ 
+                            ...formData, 
+                            name: newName,
+                            slug: editingStore ? formData.slug : generateSlug(newName)
+                          });
+                        }}
                         required
                       />
                     </div>
                     
                     <div>
-                      <Label htmlFor="slug">Slug</Label>
+                      <Label htmlFor="slug">Slug (auto-generated)</Label>
                       <Input
                         id="slug"
                         value={formData.slug}
                         onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                        placeholder="Auto-generated from store name"
                         required
                       />
                     </div>

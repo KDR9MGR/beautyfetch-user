@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Search, Package, Image as ImageIcon, Eye, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { generateSlug } from "@/utils/slugUtils";
 
 interface ProductVariant {
   id: string;
@@ -205,7 +206,7 @@ export const AdminCatalog = () => {
         category_id: formData.category_id,
         ...(formData.subcategory_id && { subcategory_id: formData.subcategory_id }),
         price: 0,
-        slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
+        slug: generateSlug(formData.name),
         store_id: '687318ed-ebda-478a-9616-e8bd88cb710b' // Use known store ID
       };
 
