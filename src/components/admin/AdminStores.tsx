@@ -248,7 +248,7 @@ export const AdminStores = () => {
           .from("stores")
           .insert([{
             ...storeData,
-            owner_id: "dummy-owner-id" // Add required owner_id placeholder
+            owner_id: "f98f185d-de8d-4ea5-8202-7bb55487834f" // Use actual admin user ID
           }])
           .select()
           .single();

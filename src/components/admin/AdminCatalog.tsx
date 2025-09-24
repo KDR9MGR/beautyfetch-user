@@ -105,7 +105,9 @@ export const AdminCatalog = () => {
         .from('products')
         .select(`
           *,
-          category:categories!products_category_id_fkey(id, name)
+          category:categories!products_category_id_fkey(id, name),
+          subcategory:categories!products_subcategory_id_fkey(id, name),
+          product_variants(*)
         `)
         .eq('store_id', '687318ed-ebda-478a-9616-e8bd88cb710b') // Catalog products from admin store
         .order('created_at', { ascending: false });
@@ -120,7 +122,12 @@ export const AdminCatalog = () => {
         description: product.description || '',
         category_id: product.category_id,
         subcategory_id: product.subcategory_id,
-        variants: product.variants || [],
+        variants: product.product_variants?.map((v: any) => ({
+          type: v.title || 'Variant',
+          value: `$${v.price || 0}`,
+          sku: v.sku,
+          inventory: v.inventory_quantity
+        })) || [],
         created_at: product.created_at,
         updated_at: product.updated_at || product.created_at,
         price: product.price || 0,
