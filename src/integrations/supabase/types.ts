@@ -1697,7 +1697,7 @@ export type Database = {
       products: {
         Row: {
           barcode: string | null
-          category_id: string
+          category_id: string | null
           compare_price: number | null
           continue_selling_when_out_of_stock: boolean | null
           cost_per_item: number | null
@@ -1727,7 +1727,7 @@ export type Database = {
         }
         Insert: {
           barcode?: string | null
-          category_id: string
+          category_id?: string | null
           compare_price?: number | null
           continue_selling_when_out_of_stock?: boolean | null
           cost_per_item?: number | null
@@ -1757,7 +1757,7 @@ export type Database = {
         }
         Update: {
           barcode?: string | null
-          category_id?: string
+          category_id?: string | null
           compare_price?: number | null
           continue_selling_when_out_of_stock?: boolean | null
           cost_per_item?: number | null
