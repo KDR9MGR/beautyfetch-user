@@ -10,10 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Search, Package, Image as ImageIcon, Eye, Save } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Package, Image as ImageIcon, Eye, Save, Check, ChevronsUpDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { generateSlug } from "@/utils/slugUtils";
+import { cn } from "@/lib/utils";
 
 interface ProductVariant {
   id: string;
@@ -531,56 +533,126 @@ export const AdminCatalog = () => {
                   </div>
                 </div>
 
-                <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
-                  <Label className="text-base font-semibold">Additional Categories (Multi-select)</Label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {categories.map((category) => (
-                      <div key={category.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`cat-${category.id}`}
-                          checked={formData.selectedCategories.includes(category.id)}
-                          onCheckedChange={(checked) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              selectedCategories: checked
-                                ? [...prev.selectedCategories, category.id]
-                                : prev.selectedCategories.filter(id => id !== category.id)
-                            }));
-                          }}
-                        />
-                        <Label htmlFor={`cat-${category.id}`} className="font-normal cursor-pointer">
-                          {category.name}
-                        </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Additional Categories (Multi-select)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                        >
+                          {formData.selectedCategories.length === 0
+                            ? "Select additional categories..."
+                            : `${formData.selectedCategories.length} selected`}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0 bg-popover" align="start">
+                        <div className="max-h-64 overflow-y-auto p-4 space-y-2">
+                          {categories.map((category) => (
+                            <div key={category.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`cat-${category.id}`}
+                                checked={formData.selectedCategories.includes(category.id)}
+                                onCheckedChange={(checked) => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    selectedCategories: checked
+                                      ? [...prev.selectedCategories, category.id]
+                                      : prev.selectedCategories.filter(id => id !== category.id)
+                                  }));
+                                }}
+                              />
+                              <Label 
+                                htmlFor={`cat-${category.id}`} 
+                                className="font-normal cursor-pointer flex-1"
+                              >
+                                {category.name}
+                              </Label>
+                              {formData.selectedCategories.includes(category.id) && (
+                                <Check className="h-4 w-4 text-primary" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    {formData.selectedCategories.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {formData.selectedCategories.map((catId) => {
+                          const category = categories.find(c => c.id === catId);
+                          return category ? (
+                            <Badge key={catId} variant="secondary" className="text-xs">
+                              {category.name}
+                            </Badge>
+                          ) : null;
+                        })}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
 
-                <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
-                  <Label className="text-base font-semibold">Additional Subcategories (Multi-select)</Label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {subcategories.map((subcategory) => (
-                      <div key={subcategory.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`subcat-${subcategory.id}`}
-                          checked={formData.selectedSubcategories.includes(subcategory.id)}
-                          onCheckedChange={(checked) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              selectedSubcategories: checked
-                                ? [...prev.selectedSubcategories, subcategory.id]
-                                : prev.selectedSubcategories.filter(id => id !== subcategory.id)
-                            }));
-                          }}
-                        />
-                        <Label htmlFor={`subcat-${subcategory.id}`} className="font-normal cursor-pointer">
-                          {subcategory.name}
-                          <span className="text-xs text-muted-foreground ml-2">
-                            ({categories.find(c => c.id === subcategory.parent_id)?.name})
-                          </span>
-                        </Label>
+                  <div className="space-y-2">
+                    <Label>Additional Subcategories (Multi-select)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                        >
+                          {formData.selectedSubcategories.length === 0
+                            ? "Select additional subcategories..."
+                            : `${formData.selectedSubcategories.length} selected`}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0 bg-popover" align="start">
+                        <div className="max-h-64 overflow-y-auto p-4 space-y-2">
+                          {subcategories.map((subcategory) => (
+                            <div key={subcategory.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`subcat-${subcategory.id}`}
+                                checked={formData.selectedSubcategories.includes(subcategory.id)}
+                                onCheckedChange={(checked) => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    selectedSubcategories: checked
+                                      ? [...prev.selectedSubcategories, subcategory.id]
+                                      : prev.selectedSubcategories.filter(id => id !== subcategory.id)
+                                  }));
+                                }}
+                              />
+                              <Label 
+                                htmlFor={`subcat-${subcategory.id}`} 
+                                className="font-normal cursor-pointer flex-1"
+                              >
+                                {subcategory.name}
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  ({categories.find(c => c.id === subcategory.parent_id)?.name})
+                                </span>
+                              </Label>
+                              {formData.selectedSubcategories.includes(subcategory.id) && (
+                                <Check className="h-4 w-4 text-primary" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    {formData.selectedSubcategories.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {formData.selectedSubcategories.map((subId) => {
+                          const subcategory = subcategories.find(s => s.id === subId);
+                          return subcategory ? (
+                            <Badge key={subId} variant="outline" className="text-xs">
+                              {subcategory.name}
+                            </Badge>
+                          ) : null;
+                        })}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
