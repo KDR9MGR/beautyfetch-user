@@ -83,8 +83,63 @@ export const AdminCatalog = () => {
     description: "",
     category_id: "",
     subcategory_id: "",
+    selectedCategories: [] as string[],
+    selectedSubcategories: [] as string[],
     variants: [] as ProductVariant[]
   });
+
+  // Pre-default variant options for beauty products
+  const defaultVariantOptions = {
+    length: ['8"', '10"', '12"', '14"', '16"', '18"', '20"', '22"', '24"', '26"', '28"', '30"'],
+    color: [
+      '1 - Jet Black',
+      '1B - Off Black', 
+      '2 - Darkest Brown',
+      '4 - Dark Brown',
+      '6 - Chestnut Brown',
+      '8 - Light Brown',
+      '10 - Medium Blonde',
+      '12 - Light Blonde',
+      '14 - Pale Blonde',
+      '16 - Platinum Blonde',
+      '27 - Honey Blonde',
+      '30 - Auburn',
+      '33 - Dark Auburn',
+      '99J - Wine Red',
+      '350 - Copper Red',
+      'Ombre',
+      'Balayage',
+      'Highlighted'
+    ],
+    texture: [
+      'Straight',
+      'Body Wave',
+      'Deep Wave',
+      'Loose Wave',
+      'Water Wave',
+      'Jerry Curl',
+      'Kinky Straight',
+      'Kinky Curly',
+      'Yaki Straight',
+      'Deep Curly',
+      'Loose Curly'
+    ],
+    curl: [
+      'Type 1 (Straight)',
+      'Type 2A (Loose Wave)',
+      'Type 2B (Wavy)',
+      'Type 2C (Defined Wave)',
+      'Type 3A (Loose Curl)',
+      'Type 3B (Bouncy Curl)',
+      'Type 3C (Tight Curl)',
+      'Type 4A (Coily)',
+      'Type 4B (Kinky)',
+      'Type 4C (Zig-Zag)'
+    ],
+    diameter: ['Small', 'Medium', 'Large', 'Extra Large'],
+    shape: ['Round', 'Oval', 'Square', 'Rectangular', 'Custom'],
+    size: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+  };
 
   const variantTypes = [
     { value: 'color', label: 'Color' },
@@ -296,6 +351,8 @@ export const AdminCatalog = () => {
       description: "",
       category_id: "",
       subcategory_id: "",
+      selectedCategories: [],
+      selectedSubcategories: [],
       variants: []
     });
   };
@@ -308,6 +365,8 @@ export const AdminCatalog = () => {
       description: product.description,
       category_id: product.category_id,
       subcategory_id: product.subcategory_id || "",
+      selectedCategories: [], // Load from product_categories table
+      selectedSubcategories: [], // Load from product_categories table
       variants: product.variants || []
     });
     setDialogOpen(true);
@@ -420,67 +479,129 @@ export const AdminCatalog = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={formData.category_id}
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
-                      category_id: value,
-                      subcategory_id: "" // Reset subcategory when category changes
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Primary Category *</Label>
+                    <Select
+                      value={formData.category_id}
+                      onValueChange={(value) => setFormData(prev => ({ 
+                        ...prev, 
+                        category_id: value,
+                        subcategory_id: "" // Reset subcategory when category changes
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select primary category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="subcategory">Primary Subcategory</Label>
+                    <Select
+                      key={formData.category_id} // Force re-render when category changes
+                      value={formData.subcategory_id}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory_id: value }))}
+                      disabled={!formData.category_id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          !formData.category_id 
+                            ? "Select category first" 
+                            : getSubcategoriesForCategory(formData.category_id).length === 0
+                            ? "No subcategories available"
+                            : "Select subcategory"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getSubcategoriesForCategory(formData.category_id).map((subcategory) => (
+                          <SelectItem key={subcategory.id} value={subcategory.id}>
+                            {subcategory.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory">Subcategory</Label>
-                  <Select
-                    key={formData.category_id} // Force re-render when category changes
-                    value={formData.subcategory_id}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, subcategory_id: value }))}
-                    disabled={!formData.category_id}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        !formData.category_id 
-                          ? "Select category first" 
-                          : getSubcategoriesForCategory(formData.category_id).length === 0
-                          ? "No subcategories available"
-                          : "Select subcategory"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getSubcategoriesForCategory(formData.category_id).map((subcategory) => (
-                        <SelectItem key={subcategory.id} value={subcategory.id}>
+
+                <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
+                  <Label className="text-base font-semibold">Additional Categories (Multi-select)</Label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {categories.map((category) => (
+                      <div key={category.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`cat-${category.id}`}
+                          checked={formData.selectedCategories.includes(category.id)}
+                          onCheckedChange={(checked) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              selectedCategories: checked
+                                ? [...prev.selectedCategories, category.id]
+                                : prev.selectedCategories.filter(id => id !== category.id)
+                            }));
+                          }}
+                        />
+                        <Label htmlFor={`cat-${category.id}`} className="font-normal cursor-pointer">
+                          {category.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
+                  <Label className="text-base font-semibold">Additional Subcategories (Multi-select)</Label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {subcategories.map((subcategory) => (
+                      <div key={subcategory.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`subcat-${subcategory.id}`}
+                          checked={formData.selectedSubcategories.includes(subcategory.id)}
+                          onCheckedChange={(checked) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              selectedSubcategories: checked
+                                ? [...prev.selectedSubcategories, subcategory.id]
+                                : prev.selectedSubcategories.filter(id => id !== subcategory.id)
+                            }));
+                          }}
+                        />
+                        <Label htmlFor={`subcat-${subcategory.id}`} className="font-normal cursor-pointer">
                           {subcategory.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            ({categories.find(c => c.id === subcategory.parent_id)?.name})
+                          </span>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label>Product Variants</Label>
+                  <Label className="text-base font-semibold">Product Variants</Label>
                   <Button type="button" onClick={addVariant} size="sm">
                     <Plus className="h-4 w-4 mr-1" />
-                    Add Variant
+                    Add Custom Variant
                   </Button>
                 </div>
+                
+                <Alert>
+                  <AlertDescription>
+                    Select from pre-defined beauty industry standard options or add custom variants
+                  </AlertDescription>
+                </Alert>
+
                 {formData.variants.map((variant, index) => (
-                  <div key={variant.id} className="border rounded-lg p-4 space-y-3">
+                  <div key={variant.id} className="border rounded-lg p-4 space-y-3 bg-card">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
                         <Label>Type</Label>
@@ -491,7 +612,7 @@ export const AdminCatalog = () => {
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-popover">
                             {variantTypes.map((type) => (
                               <SelectItem key={type.value} value={type.value}>
                                 {type.label}
@@ -502,24 +623,42 @@ export const AdminCatalog = () => {
                       </div>
                       <div>
                         <Label>Value</Label>
-                        <Input
-                          value={variant.value}
-                          onChange={(e) => updateVariant(index, 'value', e.target.value)}
-                          placeholder="Enter variant value"
-                        />
+                        {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions] ? (
+                          <Select
+                            value={variant.value}
+                            onValueChange={(value) => updateVariant(index, 'value', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select or type custom value" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover max-h-60">
+                              {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions].map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            value={variant.value}
+                            onChange={(e) => updateVariant(index, 'value', e.target.value)}
+                            placeholder="Enter variant value"
+                          />
+                        )}
                       </div>
                       <div>
-                        <Label>Photo URL</Label>
+                        <Label>Photo URL (Optional)</Label>
                         <Input
                           value={variant.image_url || ''}
                           onChange={(e) => updateVariant(index, 'image_url', e.target.value)}
-                          placeholder="Enter image URL for this variant"
+                          placeholder="Enter image URL"
                         />
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
                       {variant.image_url && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <ImageIcon className="h-4 w-4" />
                           Image added
                         </div>
