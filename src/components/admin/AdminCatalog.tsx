@@ -19,9 +19,10 @@ import { cn } from "@/lib/utils";
 
 interface ProductVariant {
   id: string;
-  type: 'color' | 'size' | 'length' | 'curl' | 'diameter' | 'texture' | 'shape';
+  type: string;
   value: string;
   image_url?: string;
+  isCustomType?: boolean;
 }
 
 interface Product {
@@ -384,7 +385,8 @@ export const AdminCatalog = () => {
       id: Date.now().toString(),
       type: 'color',
       value: '',
-      image_url: ''
+      image_url: '',
+      isCustomType: false
     };
     setFormData(prev => ({
       ...prev,
@@ -686,22 +688,53 @@ export const AdminCatalog = () => {
                   <div key={variant.id} className="border rounded-lg p-4 space-y-3 bg-card">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div>
-                        <Label>Type</Label>
-                        <Select
-                          value={variant.type}
-                          onValueChange={(value) => updateVariant(index, 'type', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover">
-                            {variantTypes.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label>Variant Type</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Select
+                              value={variant.isCustomType ? "custom" : variant.type}
+                              onValueChange={(value) => {
+                                if (value === "custom") {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    variants: prev.variants.map((v, i) => 
+                                      i === index ? { ...v, type: '', isCustomType: true } : v
+                                    )
+                                  }));
+                                } else {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    variants: prev.variants.map((v, i) => 
+                                      i === index ? { ...v, type: value, isCustomType: false } : v
+                                    )
+                                  }));
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                {variantTypes.map((type) => (
+                                  <SelectItem key={type.value} value={type.value}>
+                                    {type.label}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="custom">
+                                  ✨ Custom Type
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {variant.isCustomType && (
+                            <Input
+                              value={variant.type}
+                              onChange={(e) => updateVariant(index, 'type', e.target.value)}
+                              placeholder="Enter custom type (e.g., Pattern, Style)"
+                              className="text-sm"
+                            />
+                          )}
+                        </div>
                       </div>
                       <div className="md:col-span-2">
                         <Label>Value</Label>
@@ -709,10 +742,10 @@ export const AdminCatalog = () => {
                           <Input
                             value={variant.value}
                             onChange={(e) => updateVariant(index, 'value', e.target.value)}
-                            placeholder="Enter custom value or select from defaults"
+                            placeholder={variant.isCustomType ? "Enter custom value" : "Enter custom value or select from defaults"}
                             className="flex-1"
                           />
-                          {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions] && (
+                          {!variant.isCustomType && defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions] && (
                             <Select
                               value={variant.value}
                               onValueChange={(value) => updateVariant(index, 'value', value)}
@@ -741,18 +774,24 @@ export const AdminCatalog = () => {
                       />
                     </div>
                     <div className="flex justify-between items-center">
-                      {variant.image_url && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <ImageIcon className="h-4 w-4" />
-                          Image added
-                        </div>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {variant.image_url && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <ImageIcon className="h-4 w-4" />
+                            Image added
+                          </div>
+                        )}
+                        {variant.isCustomType && (
+                          <Badge variant="secondary" className="text-xs">
+                            Custom Type
+                          </Badge>
+                        )}
+                      </div>
                       <Button
                         type="button"
                         onClick={() => removeVariant(index)}
                         variant="outline"
                         size="sm"
-                        className="ml-auto"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
