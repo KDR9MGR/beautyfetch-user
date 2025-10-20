@@ -78,6 +78,8 @@ export const AdminCatalog = () => {
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [editingProduct, setEditingProduct] = useState<CatalogProduct | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "created" | "category">("created");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -167,7 +169,8 @@ export const AdminCatalog = () => {
           *,
           category:categories!products_category_id_fkey(id, name),
           subcategory:categories!products_subcategory_id_fkey(id, name),
-          product_variants(*)
+          product_variants(*),
+          product_categories(category_id)
         `)
         .eq('store_id', '687318ed-ebda-478a-9616-e8bd88cb710b') // Catalog products from admin store
         .order('created_at', { ascending: false });
@@ -182,12 +185,16 @@ export const AdminCatalog = () => {
         description: product.description || '',
         category_id: product.category_id,
         subcategory_id: product.subcategory_id,
-        variants: product.product_variants?.map((v: any) => ({
-          type: v.title || 'Variant',
-          value: `$${v.price || 0}`,
-          sku: v.sku,
-          inventory: v.inventory_quantity
-        })) || [],
+        variants: product.product_variants?.map((v: any) => {
+          // Parse title to extract type and value
+          const titleParts = v.title?.split(':') || [];
+          return {
+            id: v.id,
+            type: titleParts[0]?.trim() || 'Variant',
+            value: titleParts[1]?.trim() || '',
+            image_url: v.image_url
+          };
+        }) || [],
         created_at: product.created_at,
         updated_at: product.updated_at || product.created_at,
         price: product.price || 0,
@@ -271,6 +278,8 @@ export const AdminCatalog = () => {
 
       console.log('Product data:', productData);
 
+      let productId = editingProduct?.id;
+
       if (editingProduct) {
         console.log('Updating product:', editingProduct.id);
         const { error } = await supabase
@@ -282,27 +291,94 @@ export const AdminCatalog = () => {
           console.error('Update error:', error);
           throw error;
         }
-
-        toast({
-          title: "Success",
-          description: "Product updated successfully",
-        });
       } else {
         console.log('Inserting new product...');
-        const { error } = await supabase
+        const { data: newProduct, error } = await supabase
           .from('products')
-          .insert([productData]);
+          .insert([productData])
+          .select()
+          .single();
 
         if (error) {
           console.error('Insert error:', error);
           throw error;
         }
-
-        toast({
-          title: "Success",
-          description: "Product added to catalog successfully",
-        });
+        
+        productId = newProduct.id;
       }
+
+      // Save variants if any
+      if (formData.variants.length > 0 && productId) {
+        // Delete existing variants for this product
+        await supabase
+          .from('product_variants')
+          .delete()
+          .eq('product_id', productId);
+
+        // Insert new variants
+        const variantsData = formData.variants.map(variant => ({
+          product_id: productId,
+          title: `${variant.type}: ${variant.value}`,
+          price: 0,
+          sku: `${generateSlug(formData.name)}-${variant.type}-${variant.value}`,
+          image_url: variant.image_url
+        }));
+
+        const { error: variantsError } = await supabase
+          .from('product_variants')
+          .insert(variantsData);
+
+        if (variantsError) {
+          console.error('Variants error:', variantsError);
+        }
+      }
+
+      // Save additional categories if any
+      if (formData.selectedCategories.length > 0 && productId) {
+        // Delete existing product categories
+        await supabase
+          .from('product_categories')
+          .delete()
+          .eq('product_id', productId);
+
+        // Insert new product categories
+        const categoriesData = formData.selectedCategories.map(catId => ({
+          product_id: productId,
+          category_id: catId,
+          is_primary: false
+        }));
+
+        const { error: catError } = await supabase
+          .from('product_categories')
+          .insert(categoriesData);
+
+        if (catError) {
+          console.error('Categories error:', catError);
+        }
+      }
+
+      // Save additional subcategories if any
+      if (formData.selectedSubcategories.length > 0 && productId) {
+        // Add subcategories to product_categories
+        const subcategoriesData = formData.selectedSubcategories.map(subId => ({
+          product_id: productId,
+          category_id: subId,
+          is_primary: false
+        }));
+
+        const { error: subError } = await supabase
+          .from('product_categories')
+          .insert(subcategoriesData);
+
+        if (subError) {
+          console.error('Subcategories error:', subError);
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: editingProduct ? "Product updated successfully" : "Product added to catalog successfully",
+      });
 
       setDialogOpen(false);
       setEditingProduct(null);
@@ -360,16 +436,34 @@ export const AdminCatalog = () => {
     });
   };
 
-  const openEditDialog = (product: CatalogProduct) => {
+  const openEditDialog = async (product: CatalogProduct) => {
     setEditingProduct(product);
+    
+    // Fetch additional categories and subcategories for this product
+    const { data: productCategories } = await supabase
+      .from('product_categories')
+      .select('category_id, is_primary')
+      .eq('product_id', product.id)
+      .eq('is_primary', false);
+
+    const additionalCatIds = productCategories?.map(pc => pc.category_id) || [];
+    
+    // Separate categories and subcategories
+    const additionalCategories = additionalCatIds.filter(id => 
+      categories.some(cat => cat.id === id)
+    );
+    const additionalSubcategories = additionalCatIds.filter(id => 
+      subcategories.some(sub => sub.id === id)
+    );
+    
     setFormData({
       name: product.name,
       photo: product.photo,
       description: product.description,
       category_id: product.category_id,
       subcategory_id: product.subcategory_id || "",
-      selectedCategories: [], // Load from product_categories table
-      selectedSubcategories: [], // Load from product_categories table
+      selectedCategories: additionalCategories,
+      selectedSubcategories: additionalSubcategories,
       variants: product.variants || []
     });
     setDialogOpen(true);
@@ -410,11 +504,29 @@ export const AdminCatalog = () => {
     }));
   };
 
-  const filteredProducts = catalogProducts.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.subcategory?.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = catalogProducts
+    .filter(product =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.subcategory?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "category":
+          comparison = (a.category?.name || "").localeCompare(b.category?.name || "");
+          break;
+        case "created":
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+      }
+      
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
   const getSubcategoriesForCategory = (categoryId: string) => {
     return subcategories.filter(sub => sub.parent_id === categoryId);
@@ -823,6 +935,26 @@ export const AdminCatalog = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</Label>
+          <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created">Created Date</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="category">Category</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+          >
+            {sortOrder === "asc" ? "↑" : "↓"}
+          </Button>
         </div>
       </div>
 
