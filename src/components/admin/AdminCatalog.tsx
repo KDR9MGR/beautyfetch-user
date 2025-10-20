@@ -593,7 +593,7 @@ export const AdminCatalog = () => {
                     )}
                   </div>
 
-                  <div className="space-y-2">
+                   <div className="space-y-2">
                     <Label>Additional Subcategories (Multi-select)</Label>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -601,16 +601,21 @@ export const AdminCatalog = () => {
                           variant="outline"
                           role="combobox"
                           className="w-full justify-between"
+                          disabled={formData.selectedCategories.length === 0}
                         >
                           {formData.selectedSubcategories.length === 0
-                            ? "Select additional subcategories..."
+                            ? formData.selectedCategories.length === 0
+                              ? "Select categories first..."
+                              : "Select additional subcategories..."
                             : `${formData.selectedSubcategories.length} selected`}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-full p-0 bg-popover" align="start">
                         <div className="max-h-64 overflow-y-auto p-4 space-y-2">
-                          {subcategories.map((subcategory) => (
+                          {subcategories
+                            .filter(sub => formData.selectedCategories.includes(sub.parent_id))
+                            .map((subcategory) => (
                             <div key={subcategory.id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={`subcat-${subcategory.id}`}
@@ -638,6 +643,11 @@ export const AdminCatalog = () => {
                               )}
                             </div>
                           ))}
+                          {subcategories.filter(sub => formData.selectedCategories.includes(sub.parent_id)).length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-2">
+                              No subcategories available for selected categories
+                            </p>
+                          )}
                         </div>
                       </PopoverContent>
                     </Popover>
@@ -674,7 +684,7 @@ export const AdminCatalog = () => {
 
                 {formData.variants.map((variant, index) => (
                   <div key={variant.id} className="border rounded-lg p-4 space-y-3 bg-card">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div>
                         <Label>Type</Label>
                         <Select
@@ -693,40 +703,42 @@ export const AdminCatalog = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
+                      <div className="md:col-span-2">
                         <Label>Value</Label>
-                        {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions] ? (
-                          <Select
-                            value={variant.value}
-                            onValueChange={(value) => updateVariant(index, 'value', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select or type custom value" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover max-h-60">
-                              {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions].map((option) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
+                        <div className="flex gap-2">
                           <Input
                             value={variant.value}
                             onChange={(e) => updateVariant(index, 'value', e.target.value)}
-                            placeholder="Enter variant value"
+                            placeholder="Enter custom value or select from defaults"
+                            className="flex-1"
                           />
-                        )}
+                          {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions] && (
+                            <Select
+                              value={variant.value}
+                              onValueChange={(value) => updateVariant(index, 'value', value)}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Defaults" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover max-h-60">
+                                {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions].map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <Label>Photo URL (Optional)</Label>
-                        <Input
-                          value={variant.image_url || ''}
-                          onChange={(e) => updateVariant(index, 'image_url', e.target.value)}
-                          placeholder="Enter image URL"
-                        />
-                      </div>
+                    </div>
+                    <div>
+                      <Label>Photo URL (Optional)</Label>
+                      <Input
+                        value={variant.image_url || ''}
+                        onChange={(e) => updateVariant(index, 'image_url', e.target.value)}
+                        placeholder="Enter image URL"
+                      />
                     </div>
                     <div className="flex justify-between items-center">
                       {variant.image_url && (
