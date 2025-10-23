@@ -54,6 +54,8 @@ interface CatalogProduct {
   image_url?: string;
   category?: { id: string; name: string };
   subcategory?: { id: string; name: string };
+  additionalCategories?: { id: string; name: string }[];
+  additionalSubcategories?: { id: string; name: string }[];
 }
 
 interface Category {
@@ -1009,18 +1011,56 @@ export const AdminCatalog = () => {
                     </TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">
-                        {product.category?.name || 'No Category'}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {product.category && (
+                          <Badge variant="secondary">
+                            {product.category.name}
+                          </Badge>
+                        )}
+                        {product.additionalCategories && product.additionalCategories.length > 0 && (
+                          <>
+                            {product.additionalCategories.slice(0, 2).map((cat, index) => (
+                              <Badge key={index} variant="secondary">
+                                {cat.name}
+                              </Badge>
+                            ))}
+                            {product.additionalCategories.length > 2 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{product.additionalCategories.length - 2}
+                              </Badge>
+                            )}
+                          </>
+                        )}
+                        {!product.category && (!product.additionalCategories || product.additionalCategories.length === 0) && (
+                          <span className="text-gray-400">No Category</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      {product.subcategory ? (
-                        <Badge variant="outline">
-                          {product.subcategory.name}
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {product.subcategory && (
+                          <Badge variant="outline">
+                            {product.subcategory.name}
+                          </Badge>
+                        )}
+                        {product.additionalSubcategories && product.additionalSubcategories.length > 0 && (
+                          <>
+                            {product.additionalSubcategories.slice(0, 2).map((subcat, index) => (
+                              <Badge key={index} variant="outline">
+                                {subcat.name}
+                              </Badge>
+                            ))}
+                            {product.additionalSubcategories.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{product.additionalSubcategories.length - 2}
+                              </Badge>
+                            )}
+                          </>
+                        )}
+                        {!product.subcategory && (!product.additionalSubcategories || product.additionalSubcategories.length === 0) && (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
