@@ -22,6 +22,7 @@ interface ProductVariant {
   type: string;
   value: string;
   image_url?: string;
+  isCustom?: boolean;
 }
 
 interface Product {
@@ -521,7 +522,22 @@ export const AdminCatalog = () => {
       id: Date.now().toString(),
       type: 'color',
       value: '',
-      image_url: ''
+      image_url: '',
+      isCustom: false
+    };
+    setFormData(prev => ({
+      ...prev,
+      variants: [...prev.variants, newVariant]
+    }));
+  };
+
+  const addCustomVariant = () => {
+    const newVariant: ProductVariant = {
+      id: Date.now().toString(),
+      type: '',
+      value: '',
+      image_url: '',
+      isCustom: true
     };
     setFormData(prev => ({
       ...prev,
@@ -825,66 +841,91 @@ export const AdminCatalog = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <Label className="text-base font-semibold">Product Variants</Label>
-                  <Button type="button" onClick={addVariant} size="sm">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Variant
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="button" onClick={addVariant} size="sm" variant="outline">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Variant
+                    </Button>
+                    <Button type="button" onClick={addCustomVariant} size="sm">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Custom Variant
+                    </Button>
+                  </div>
                 </div>
                 
                 <Alert>
                   <AlertDescription>
-                    Select from pre-defined beauty industry standard options
+                    Add variants using pre-defined options or create custom ones
                   </AlertDescription>
                 </Alert>
 
                 {formData.variants.map((variant, index) => (
                   <div key={variant.id} className="border rounded-lg p-4 space-y-3 bg-card">
+                    {variant.isCustom && (
+                      <Badge variant="secondary" className="mb-2">Custom Variant</Badge>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div>
                         <Label>Variant Type</Label>
-                        <Select
-                          value={variant.type}
-                          onValueChange={(value) => updateVariant(index, 'type', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover">
-                            {variantTypes.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {variant.isCustom ? (
+                          <Input
+                            value={variant.type}
+                            onChange={(e) => updateVariant(index, 'type', e.target.value)}
+                            placeholder="e.g., Material, Pattern"
+                          />
+                        ) : (
+                          <Select
+                            value={variant.type}
+                            onValueChange={(value) => updateVariant(index, 'type', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover">
+                              {variantTypes.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
                       <div className="md:col-span-2">
                         <Label>Value</Label>
-                        <div className="flex gap-2">
+                        {variant.isCustom ? (
                           <Input
                             value={variant.value}
                             onChange={(e) => updateVariant(index, 'value', e.target.value)}
-                            placeholder="Enter value or select from defaults"
-                            className="flex-1"
+                            placeholder="Enter custom value"
                           />
-                          {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions] && (
-                            <Select
+                        ) : (
+                          <div className="flex gap-2">
+                            <Input
                               value={variant.value}
-                              onValueChange={(value) => updateVariant(index, 'value', value)}
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="Defaults" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-popover max-h-60">
-                                {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions].map((option) => (
-                                  <SelectItem key={option} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
+                              onChange={(e) => updateVariant(index, 'value', e.target.value)}
+                              placeholder="Enter value or select from defaults"
+                              className="flex-1"
+                            />
+                            {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions] && (
+                              <Select
+                                value={variant.value}
+                                onValueChange={(value) => updateVariant(index, 'value', value)}
+                              >
+                                <SelectTrigger className="w-[140px]">
+                                  <SelectValue placeholder="Defaults" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover max-h-60">
+                                  {defaultVariantOptions[variant.type as keyof typeof defaultVariantOptions].map((option) => (
+                                    <SelectItem key={option} value={option}>
+                                      {option}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
