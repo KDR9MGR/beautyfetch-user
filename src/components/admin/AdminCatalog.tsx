@@ -172,7 +172,10 @@ export const AdminCatalog = () => {
           category:categories!products_category_id_fkey(id, name),
           subcategory:categories!products_subcategory_id_fkey(id, name),
           product_variants(*),
-          product_categories(category_id)
+          product_categories(
+            category_id,
+            categories(id, name, parent_id)
+          )
         `)
         .eq('store_id', '687318ed-ebda-478a-9616-e8bd88cb710b') // Catalog products from admin store
         .order('created_at', { ascending: false });
@@ -180,32 +183,55 @@ export const AdminCatalog = () => {
       if (error) throw error;
       
       // Transform data to match CatalogProduct interface
-      const transformedData = (data || []).map((product: any) => ({
-        id: product.id,
-        name: product.name,
-        photo: product.images?.[0] || '',
-        description: product.description || '',
-        category_id: product.category_id,
-        subcategory_id: product.subcategory_id,
-        variants: product.product_variants?.map((v: any) => {
-          // Parse title to extract type and value
-          const titleParts = v.title?.split(':') || [];
-          return {
-            id: v.id,
-            type: titleParts[0]?.trim() || 'Variant',
-            value: titleParts[1]?.trim() || '',
-            image_url: v.image_url
-          };
-        }) || [],
-        created_at: product.created_at,
-        updated_at: product.updated_at || product.created_at,
-        price: product.price || 0,
-        slug: product.slug || '',
-        store_id: product.store_id || '',
-        image_url: product.image_url,
-        category: product.category,
-        subcategory: product.subcategory
-      }));
+      const transformedData = (data || []).map((product: any) => {
+        // Separate additional categories and subcategories
+        const allProductCategories = product.product_categories || [];
+        const additionalCategories: { id: string; name: string }[] = [];
+        const additionalSubcategories: { id: string; name: string }[] = [];
+        
+        allProductCategories.forEach((pc: any) => {
+          const cat = pc.categories;
+          if (!cat) return;
+          
+          // If it's a parent category (no parent_id) and not the primary category
+          if (!cat.parent_id && cat.id !== product.category_id) {
+            additionalCategories.push({ id: cat.id, name: cat.name });
+          }
+          // If it's a subcategory (has parent_id) and not the primary subcategory
+          else if (cat.parent_id && cat.id !== product.subcategory_id) {
+            additionalSubcategories.push({ id: cat.id, name: cat.name });
+          }
+        });
+
+        return {
+          id: product.id,
+          name: product.name,
+          photo: product.images?.[0] || '',
+          description: product.description || '',
+          category_id: product.category_id,
+          subcategory_id: product.subcategory_id,
+          variants: product.product_variants?.map((v: any) => {
+            // Parse title to extract type and value
+            const titleParts = v.title?.split(':') || [];
+            return {
+              id: v.id,
+              type: titleParts[0]?.trim() || 'Variant',
+              value: titleParts[1]?.trim() || '',
+              image_url: v.image_url
+            };
+          }) || [],
+          created_at: product.created_at,
+          updated_at: product.updated_at || product.created_at,
+          price: product.price || 0,
+          slug: product.slug || '',
+          store_id: product.store_id || '',
+          image_url: product.image_url,
+          category: product.category,
+          subcategory: product.subcategory,
+          additionalCategories,
+          additionalSubcategories
+        };
+      });
       
       setCatalogProducts(transformedData);
     } catch (error) {
