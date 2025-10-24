@@ -337,27 +337,42 @@ export const AdminCatalog = () => {
 
       // Save variants if any
       if (formData.variants.length > 0 && productId) {
+        console.log('Saving variants:', formData.variants);
+        
         // Delete existing variants for this product
         await supabase
           .from('product_variants')
           .delete()
           .eq('product_id', productId);
 
-        // Insert new variants
-        const variantsData = formData.variants.map(variant => ({
-          product_id: productId,
-          title: `${variant.type}: ${variant.value}`,
-          price: 0,
-          sku: `${generateSlug(formData.name)}-${variant.type}-${variant.value}`,
-          image_url: variant.image_url
-        }));
+        // Insert new variants - only those with values
+        const variantsData = formData.variants
+          .filter(variant => variant.value && variant.value.trim() !== '')
+          .map(variant => ({
+            product_id: productId,
+            title: `${variant.type}: ${variant.value}`,
+            price: 0,
+            sku: `${generateSlug(formData.name)}-${generateSlug(variant.type)}-${generateSlug(variant.value)}`,
+            image_url: variant.image_url || null
+          }));
 
-        const { error: variantsError } = await supabase
-          .from('product_variants')
-          .insert(variantsData);
+        console.log('Variants data to insert:', variantsData);
 
-        if (variantsError) {
-          console.error('Variants error:', variantsError);
+        if (variantsData.length > 0) {
+          const { error: variantsError } = await supabase
+            .from('product_variants')
+            .insert(variantsData);
+
+          if (variantsError) {
+            console.error('Variants save error:', variantsError);
+            toast({
+              title: "Warning",
+              description: "Product saved but variants failed to save: " + variantsError.message,
+              variant: "destructive",
+            });
+          } else {
+            console.log('Variants saved successfully');
+          }
         }
       }
 
@@ -1090,15 +1105,21 @@ export const AdminCatalog = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {product.variants?.slice(0, 2).map((variant, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {variant.type}: {variant.value}
-                          </Badge>
-                        ))}
-                        {product.variants && product.variants.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{product.variants.length - 2} more
-                          </Badge>
+                        {product.variants && product.variants.length > 0 ? (
+                          <>
+                            {product.variants.slice(0, 2).map((variant, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {variant.type}: {variant.value}
+                              </Badge>
+                            ))}
+                            {product.variants.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{product.variants.length - 2} more
+                              </Badge>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No variants</span>
                         )}
                       </div>
                     </TableCell>
