@@ -1,74 +1,74 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Palette, 
   Type, 
-  Image, 
-  Square, 
-  Sparkles, 
   Layout, 
-  FileText, 
-  Newspaper,
-  Tag,
-  Monitor,
-  Tablet,
-  Smartphone,
-  Upload,
   Save,
-  Eye,
-  EyeOff
+  RefreshCw
 } from "lucide-react";
+
+interface ColorSettings {
+  background: string;
+  primary: string;
+  secondary: string;
+  text: string;
+  header: string;
+  footer: string;
+  accent: string;
+}
+
+interface FontSettings {
+  headingFont: string;
+  bodyFont: string;
+  fontSize: string;
+  lineSpacing: string;
+}
+
+interface SectionVisibility {
+  heroBanner: boolean;
+  featuredProducts: boolean;
+  collections: boolean;
+  stores: boolean;
+  testimonials: boolean;
+  blog: boolean;
+}
 
 export const AdminCustomization = () => {
   const { toast } = useToast();
-  const [previewMode, setPreviewMode] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Color palette state
-  const [colors, setColors] = useState({
+  const [colors, setColors] = useState<ColorSettings>({
     background: "#ffffff",
-    primaryButton: "#ec4899",
-    secondaryButton: "#f3f4f6",
+    primary: "#ec4899",
+    secondary: "#f3f4f6",
     text: "#111827",
     header: "#ffffff",
     footer: "#1f2937",
     accent: "#ec4899",
-    link: "#3b82f6",
   });
 
   // Font settings state
-  const [fonts, setFonts] = useState({
+  const [fonts, setFonts] = useState<FontSettings>({
     headingFont: "Inter",
     bodyFont: "Inter",
     fontSize: "16",
     lineSpacing: "1.5",
   });
 
-  // Button settings state
-  const [buttonSettings, setButtonSettings] = useState({
-    shape: "rounded",
-    size: "medium",
-    hoverEffect: "darken",
-  });
-
-  // Border & shadow settings
-  const [styleSettings, setStyleSettings] = useState({
-    showBorders: true,
-    showShadows: true,
-    borderRadius: "8",
-  });
-
   // Homepage section visibility
-  const [homepageSections, setHomepageSections] = useState({
+  const [homepageSections, setHomepageSections] = useState<SectionVisibility>({
     heroBanner: true,
     featuredProducts: true,
     collections: true,
@@ -77,27 +77,98 @@ export const AdminCustomization = () => {
     blog: true,
   });
 
-  // Mobile visibility overrides
-  const [mobileVisibility, setMobileVisibility] = useState({
-    heroBanner: true,
-    featuredProducts: true,
-    collections: true,
-    stores: true,
-    testimonials: false,
-    blog: false,
-  });
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('site_customization')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        data.forEach(setting => {
+          switch (setting.setting_key) {
+            case 'colors':
+              setColors(setting.setting_value as unknown as ColorSettings);
+              break;
+            case 'fonts':
+              setFonts(setting.setting_value as unknown as FontSettings);
+              break;
+            case 'homepage_sections':
+              setHomepageSections(setting.setting_value as unknown as SectionVisibility);
+              break;
+          }
+        });
+        
+        toast({
+          title: "Settings loaded",
+          description: "Your customization settings have been loaded.",
+        });
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      toast({
+        title: "Error loading settings",
+        description: "Using default settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      // TODO: Save to database
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Save colors
+      const { error: colorsError } = await supabase
+        .from('site_customization')
+        .upsert([{
+          setting_key: 'colors',
+          setting_value: colors as any,
+        }], {
+          onConflict: 'setting_key'
+        });
+      
+      if (colorsError) throw colorsError;
+
+      // Save fonts
+      const { error: fontsError } = await supabase
+        .from('site_customization')
+        .upsert([{
+          setting_key: 'fonts',
+          setting_value: fonts as any,
+        }], {
+          onConflict: 'setting_key'
+        });
+      
+      if (fontsError) throw fontsError;
+
+      // Save homepage sections
+      const { error: sectionsError } = await supabase
+        .from('site_customization')
+        .upsert([{
+          setting_key: 'homepage_sections',
+          setting_value: homepageSections as any,
+        }], {
+          onConflict: 'setting_key'
+        });
+      
+      if (sectionsError) throw sectionsError;
       
       toast({
         title: "Settings saved",
         description: "Your customization settings have been saved successfully.",
       });
     } catch (error) {
+      console.error('Error saving settings:', error);
       toast({
         title: "Error",
         description: "Failed to save settings. Please try again.",
@@ -108,6 +179,14 @@ export const AdminCustomization = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -116,63 +195,22 @@ export const AdminCustomization = () => {
           <p className="text-muted-foreground">Customize your website appearance and content</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Eye className="h-4 w-4 mr-2" />
-            Preview Changes
+          <Button variant="outline" onClick={loadSettings}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reload
           </Button>
           <Button onClick={handleSaveSettings} disabled={isSaving}>
             <Save className="h-4 w-4 mr-2" />
-            {isSaving ? "Saving..." : "Save All Changes"}
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
 
-      {/* Device Preview Toggle */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Monitor className="h-5 w-5" />
-            Preview Mode
-          </CardTitle>
-          <CardDescription>View how your changes will look on different devices</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Button
-              variant={previewMode === "desktop" ? "default" : "outline"}
-              onClick={() => setPreviewMode("desktop")}
-            >
-              <Monitor className="h-4 w-4 mr-2" />
-              Desktop
-            </Button>
-            <Button
-              variant={previewMode === "tablet" ? "default" : "outline"}
-              onClick={() => setPreviewMode("tablet")}
-            >
-              <Tablet className="h-4 w-4 mr-2" />
-              Tablet
-            </Button>
-            <Button
-              variant={previewMode === "mobile" ? "default" : "outline"}
-              onClick={() => setPreviewMode("mobile")}
-            >
-              <Smartphone className="h-4 w-4 mr-2" />
-              Mobile
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <Tabs defaultValue="colors" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="colors">Colors</TabsTrigger>
-          <TabsTrigger value="fonts">Fonts</TabsTrigger>
-          <TabsTrigger value="media">Media</TabsTrigger>
-          <TabsTrigger value="buttons">Buttons</TabsTrigger>
+          <TabsTrigger value="fonts">Typography</TabsTrigger>
           <TabsTrigger value="layout">Layout</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="blog">Blog</TabsTrigger>
-          <TabsTrigger value="promotions">Promos</TabsTrigger>
         </TabsList>
 
         {/* Colors Tab */}
@@ -287,192 +325,6 @@ export const AdminCustomization = () => {
           </Card>
         </TabsContent>
 
-        {/* Media Tab */}
-        <TabsContent value="media" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Image className="h-5 w-5" />
-                Logo & Branding
-              </CardTitle>
-              <CardDescription>Upload and manage your brand assets</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Website Logo</Label>
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG up to 2MB</p>
-                  <Input type="file" className="mt-4" accept="image/*" />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Favicon</Label>
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Upload favicon (32x32 or 64x64)
-                  </p>
-                  <Input type="file" className="mt-4" accept="image/x-icon,image/png" />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Hero Banner Image</Label>
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Upload hero banner (recommended: 1920x600)
-                  </p>
-                  <Input type="file" className="mt-4" accept="image/*" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Custom Icons</CardTitle>
-              <CardDescription>Upload custom icons for cart, user, search, etc.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {["Cart Icon", "User Icon", "Search Icon"].map((iconName) => (
-                  <div key={iconName} className="space-y-2">
-                    <Label>{iconName}</Label>
-                    <div className="border rounded-lg p-4 text-center">
-                      <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                      <Input type="file" className="text-xs" accept="image/svg+xml,image/png" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Buttons Tab */}
-        <TabsContent value="buttons" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Square className="h-5 w-5" />
-                Button Styling
-              </CardTitle>
-              <CardDescription>Customize button appearance and behavior</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Button Shape</Label>
-                  <Select value={buttonSettings.shape} onValueChange={(value) => setButtonSettings({ ...buttonSettings, shape: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="square">Square</SelectItem>
-                      <SelectItem value="rounded">Rounded</SelectItem>
-                      <SelectItem value="pill">Pill (fully rounded)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Button Size</Label>
-                  <Select value={buttonSettings.size} onValueChange={(value) => setButtonSettings({ ...buttonSettings, size: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="small">Small</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="large">Large</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Hover Effect</Label>
-                  <Select value={buttonSettings.hoverEffect} onValueChange={(value) => setButtonSettings({ ...buttonSettings, hoverEffect: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="darken">Darken</SelectItem>
-                      <SelectItem value="lighten">Lighten</SelectItem>
-                      <SelectItem value="scale">Scale Up</SelectItem>
-                      <SelectItem value="shadow">Add Shadow</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Button Preview</Label>
-                <div className="flex gap-4 flex-wrap">
-                  <Button>Primary Button</Button>
-                  <Button variant="secondary">Secondary Button</Button>
-                  <Button variant="outline">Outline Button</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5" />
-                Borders & Shadows
-              </CardTitle>
-              <CardDescription>Control visual styling elements</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Show Borders on Cards</Label>
-                  <p className="text-sm text-muted-foreground">Add borders around sections and cards</p>
-                </div>
-                <Switch
-                  checked={styleSettings.showBorders}
-                  onCheckedChange={(checked) => setStyleSettings({ ...styleSettings, showBorders: checked })}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Show Shadows</Label>
-                  <p className="text-sm text-muted-foreground">Add drop shadows to elements</p>
-                </div>
-                <Switch
-                  checked={styleSettings.showShadows}
-                  onCheckedChange={(checked) => setStyleSettings({ ...styleSettings, showShadows: checked })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Border Radius (px)</Label>
-                <Input
-                  type="number"
-                  value={styleSettings.borderRadius}
-                  onChange={(e) => setStyleSettings({ ...styleSettings, borderRadius: e.target.value })}
-                  min="0"
-                  max="24"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Layout Tab */}
         <TabsContent value="layout" className="space-y-4">
           <Card>
@@ -487,11 +339,9 @@ export const AdminCustomization = () => {
               {Object.entries(homepageSections).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label className="capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </Label>
+                    <Label className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Show/hide on homepage
+                      Display this section on the homepage
                     </p>
                   </div>
                   <Switch
@@ -502,194 +352,6 @@ export const AdminCustomization = () => {
                   />
                 </div>
               ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5" />
-                Mobile Visibility
-              </CardTitle>
-              <CardDescription>Override section visibility for mobile devices</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.entries(mobileVisibility).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {value ? <Eye className="inline h-3 w-3" /> : <EyeOff className="inline h-3 w-3" />}
-                      {value ? " Visible on mobile" : " Hidden on mobile"}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={value}
-                    onCheckedChange={(checked) => 
-                      setMobileVisibility({ ...mobileVisibility, [key]: checked })
-                    }
-                  />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Content Tab */}
-        <TabsContent value="content" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Text Content
-              </CardTitle>
-              <CardDescription>Edit headlines, paragraphs, and CTAs</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Hero Headline</Label>
-                <Input placeholder="e.g., Discover Your Perfect Beauty Products" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Hero Subheadline</Label>
-                <Textarea placeholder="e.g., Shop from local stores and get same-day delivery" rows={3} />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Primary CTA Button Text</Label>
-                <Input placeholder="e.g., Shop Now" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Secondary CTA Button Text</Label>
-                <Input placeholder="e.g., Browse Stores" />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Featured Products Section Title</Label>
-                <Input placeholder="e.g., Featured Products" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Featured Products Description</Label>
-                <Textarea placeholder="e.g., Check out our handpicked selection" rows={2} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Blog Tab */}
-        <TabsContent value="blog" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Newspaper className="h-5 w-5" />
-                Blog & News
-              </CardTitle>
-              <CardDescription>Manage blog posts and news articles</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Enable Blog Section</Label>
-                  <p className="text-sm text-muted-foreground">Show blog on your website</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Blog Section Title</Label>
-                <Input placeholder="e.g., Latest Beauty Tips" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Number of Posts to Display</Label>
-                <Select defaultValue="3">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3">3 posts</SelectItem>
-                    <SelectItem value="6">6 posts</SelectItem>
-                    <SelectItem value="9">9 posts</SelectItem>
-                    <SelectItem value="12">12 posts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button className="w-full" variant="outline">
-                Manage Blog Posts
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Promotions Tab */}
-        <TabsContent value="promotions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Tag className="h-5 w-5" />
-                Discounts & Coupons
-              </CardTitle>
-              <CardDescription>Manage promotional offers and discount codes</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Show Promo Banner</Label>
-                  <p className="text-sm text-muted-foreground">Display promotional banner at top</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Promo Banner Text</Label>
-                <Input placeholder="e.g., Free shipping on orders over $50!" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Promo Banner Background Color</Label>
-                <div className="flex gap-2">
-                  <Input type="color" defaultValue="#ec4899" className="w-20 h-10" />
-                  <Input type="text" defaultValue="#ec4899" className="flex-1" />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Active Discount Codes</Label>
-                <div className="border rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">WELCOME10</p>
-                      <p className="text-sm text-muted-foreground">10% off first order</p>
-                    </div>
-                    <Button variant="outline" size="sm">Edit</Button>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">FREESHIP</p>
-                      <p className="text-sm text-muted-foreground">Free shipping</p>
-                    </div>
-                    <Button variant="outline" size="sm">Edit</Button>
-                  </div>
-                </div>
-              </div>
-
-              <Button className="w-full">
-                <Tag className="h-4 w-4 mr-2" />
-                Create New Coupon
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
