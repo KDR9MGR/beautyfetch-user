@@ -18,6 +18,7 @@ import { AdminMessages } from "@/components/admin/AdminMessages";
 import { AdminDrivers } from "@/components/admin/AdminDrivers";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
+import { AdminCustomization } from "@/components/admin/AdminCustomization";
 import { Store, Package, ShoppingCart, Users, LogOut, Shield, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -214,6 +215,7 @@ const Admin = () => {
             <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground min-w-max">
               <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
+              <TabsTrigger value="customization" className="whitespace-nowrap">Customization</TabsTrigger>
               <TabsTrigger value="approvals" className="whitespace-nowrap">Approvals</TabsTrigger>
               <TabsTrigger value="messages" className="whitespace-nowrap">Messages</TabsTrigger>
               <TabsTrigger value="stores" className="whitespace-nowrap">Stores</TabsTrigger>
@@ -275,6 +277,10 @@ const Admin = () => {
 
           <TabsContent value="analytics">
             <AdminAnalytics />
+          </TabsContent>
+
+          <TabsContent value="customization">
+            <AdminCustomization />
           </TabsContent>
 
           <TabsContent value="approvals">
