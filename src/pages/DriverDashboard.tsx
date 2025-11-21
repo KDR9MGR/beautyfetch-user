@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,17 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-=======
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
 import { DriverRoute } from '@/components/ProtectedRoute';
 import { DriverHeader } from '@/components/driver/DriverHeader';
 import { ActiveDeliveries } from '@/components/driver/ActiveDeliveries';
 import { DeliveryHistory } from '@/components/driver/DeliveryHistory';
 import { EarningsReport } from '@/components/driver/EarningsReport';
 import { RouteMap } from '@/components/driver/RouteMap';
-<<<<<<< HEAD
 import {
   Truck,
   Package,
@@ -417,48 +411,10 @@ const DriverDashboard = () => {
               </TabsContent>
             </Tabs>
           </div>
-=======
-
-const DriverDashboard = () => {
-  return (
-    <DriverRoute>
-      <div className="min-h-screen bg-gray-50">
-        <DriverHeader />
-        
-        <main className="container mx-auto px-4 py-8">
-          <Tabs defaultValue="active" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="active">Active Deliveries</TabsTrigger>
-              <TabsTrigger value="map">Route Map</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-              <TabsTrigger value="earnings">Earnings</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="active">
-              <ActiveDeliveries />
-            </TabsContent>
-
-            <TabsContent value="map">
-              <RouteMap />
-            </TabsContent>
-
-            <TabsContent value="history">
-              <DeliveryHistory />
-            </TabsContent>
-
-            <TabsContent value="earnings">
-              <EarningsReport />
-            </TabsContent>
-          </Tabs>
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
         </main>
       </div>
     </DriverRoute>
   );
 };
 
-<<<<<<< HEAD
 export default DriverDashboard;
-=======
-export default DriverDashboard; 
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1

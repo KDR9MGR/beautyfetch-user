@@ -575,13 +575,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     return false;
   };
-<<<<<<< HEAD
   const isMerchant = () => profile?.role === 'store_owner' || profile?.role === 'admin';
   const isDriver = () => profile?.role === 'driver' || profile?.role === 'admin';
-=======
-  const isMerchant = () => profile?.role === 'store_owner';
-  const isDriver = () => profile?.role === 'driver';
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
   const isCustomer = () => profile?.role === 'customer';
 
   const signOut = async () => {

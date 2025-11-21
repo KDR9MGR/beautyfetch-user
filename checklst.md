@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ✅ OVERVIEW CHECKLIST
 🔧 Website Development (Customer-Facing)
 Location-Based Store Selection
@@ -330,72 +329,3 @@ Use Supabase client libraries for backend comms
 
 
 
-=======
-#1. PRODUCTS
-
-1.1 Store Listings on Product Pages: Under each product, where it currently says "stores," it should show the number of stores carrying
-that product.
-
-1.2 Add a dropdown menu that displays the full list of those stores when clicked.
-
-1.3 Pricing Display: Product pricing should vary because different stores may have different prices for the same item.
-
-1.4 Product Information Editing: When clicking "Edit Product," the product-specific information should dynamically change based on
-the selected store (e.g., store-specific price & cost).
-
-1.5 Category Dropdown for Products: Include a dropdown for product categories since some products fall into multiple categories.
-Product Listing Format: Products should appear in alphabetical order.
-Include a search bar for easier navigation.
-
-#2. CATEGORIES
-
-2.1 Subcategory Dropdowns: Categories should support dropdowns for subcategories.
-
-2.2 Editing View: When editing a category, admin should be able to view all products within that category and any
-subcategories.
-This functionality should also apply when editing subcategories.
-
-#3. ORDERS
-
-3.1 Order Tabs: Add tabs for Canceled Orders,Archived Orders,Fraud Risk (if possible)
-Store-Based Filtering: Orders should be able to be filterable by stores as well.
-Cost Breakdown: Add a “Cost Per Order” view showing: How much was spent
-What the customer paidProfit margins
-
-#4. USERS
-
-4.1 Admin Access to User Info: Under user details, admins should be able to:
-Block usersSee their full order history
-View all personal info provided during registration
-
-#5. STORES 
-
-5.1 Visibility: Store hours should be visible in both edit mode and public view.
-
-5.2 Owner & Manager Details: Add a tab for store owner & store managers information (viewable in edit mode).
-5.3 Commission Info: Create a section to display the commission Beauty Fetch earns mode). per store (visible in edit & view
-
-Order Count: Add visibility for the number of orders per store (outside of edit mode).
-
-#6. MESSAGES
-
-Messages should be able to be  organized by store as well.
-
-#7. APPROVALS
-
-7.1 There should only be 5 types of approval/requests** that merchants can submit:Product updates
-Store informationSale updates
-New MerchantOther
-All approval requests should be in survey format for the merchants.
-
-#8. CUSTOMER VIEW FIXES (Website Frontend)
-
-8.1 Merchant Sign-Up: There should be a page where merchants can sign up.
-Once submitted, it becomes a request that admins can manually approve.
-
-8.2 Driver Sign-Up: Add a page for driver applications.
-It should include all driver info fields (including DOB) and save submissions under a "Driver Info"section in the admin panel.
-
-8.3 Delivery Announcements: There should be a customizable thin moving banner above the purple banner for temporary or
-ongoing announcements (e.g. banners).
->>>>>>> 18a30d9 (feat: add product import/export (Shopify CSV support), admin UI, and error handling)
