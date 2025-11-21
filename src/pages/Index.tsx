@@ -9,8 +9,11 @@ import { CollectionsShowcase } from "@/components/CollectionsShowcase";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import { BlogPreview } from "@/components/BlogPreview";
 import { useLocation } from "@/contexts/LocationContext";
+<<<<<<< HEAD
 import { useCustomization } from "@/contexts/CustomizationContext";
 import { useMemo } from "react";
+=======
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
 
 // Safe component wrapper to prevent entire page crashes
 const SafeComponent = ({ children, name }: { children: React.ReactNode, name: string }) => {
@@ -28,9 +31,14 @@ const SafeComponent = ({ children, name }: { children: React.ReactNode, name: st
 
 const Index = () => {
   console.log('Index component is rendering');
+<<<<<<< HEAD
 
   const { userLocation } = useLocation();
   const { homepageLayout } = useCustomization();
+=======
+  
+  const { userLocation } = useLocation();
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
 
   // Add debug logging
   console.log('User location:', userLocation);
@@ -40,6 +48,7 @@ const Index = () => {
     hasSupabaseKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY
   });
 
+<<<<<<< HEAD
   // Create sorted sections based on visibility and order
   const sortedSections = useMemo(() => {
     if (!homepageLayout?.sections) {
@@ -106,6 +115,8 @@ const Index = () => {
       .sort((a, b) => a.order - b.order);
   }, [homepageLayout, userLocation]);
 
+=======
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
   return (
     <div className="min-h-screen bg-white">
       {/* Debug info for development */}
@@ -127,6 +138,7 @@ const Index = () => {
       <SafeComponent name="Header">
         <Header />
       </SafeComponent>
+<<<<<<< HEAD
 
       <main className="flex-grow">
         {sortedSections.map((section) => (
@@ -136,6 +148,40 @@ const Index = () => {
         ))}
       </main>
 
+=======
+      
+      <main className="flex-grow">
+        <SafeComponent name="HeroSection">
+          <HeroSection />
+        </SafeComponent>
+        
+        <SafeComponent name="CategorySection">
+          <CategorySection />
+        </SafeComponent>
+        
+        <SafeComponent name="StoresSection">
+          {/* Show nearby stores if location is set, otherwise show featured stores */}
+          {userLocation ? <NearbyStores /> : <FeaturedStores />}
+        </SafeComponent>
+        
+        <SafeComponent name="FeaturedProducts">
+          <FeaturedProducts />
+        </SafeComponent>
+        
+        <SafeComponent name="CollectionsShowcase">
+          <CollectionsShowcase />
+        </SafeComponent>
+        
+        <SafeComponent name="ReviewsSection">
+          <ReviewsSection />
+        </SafeComponent>
+        
+        <SafeComponent name="BlogPreview">
+          <BlogPreview />
+        </SafeComponent>
+      </main>
+      
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
       <SafeComponent name="Footer">
         <Footer />
       </SafeComponent>

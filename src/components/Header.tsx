@@ -150,7 +150,11 @@ const Header = () => {
                     
                     {/* Show driver button for drivers */}
                     {profile?.role === "driver" && (
+<<<<<<< HEAD
                       <Link to="/driver">
+=======
+                      <Link to="/driver-dashboard">
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
                         <Button variant="outline" size="sm">
                           <Package className="h-4 w-4 mr-2" />
                           Driver
@@ -371,7 +375,11 @@ const Header = () => {
                     
                     {profile?.role === "driver" && (
                       <Link
+<<<<<<< HEAD
                         to="/driver"
+=======
+                        to="/driver-dashboard"
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
                         className="text-gray-700 hover:text-pink-600 block px-3 py-2 text-base font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >

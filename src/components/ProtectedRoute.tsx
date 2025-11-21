@@ -46,7 +46,11 @@ export const AdminRoute = ({ children }: ProtectedRouteProps) => {
 
 export const MerchantRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
+<<<<<<< HEAD
   const [isMerchantOrAdmin, setIsMerchantOrAdmin] = useState<boolean | null>(null);
+=======
+  const [isMerchant, setIsMerchant] = useState<boolean | null>(null);
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
 
   useEffect(() => {
     const checkMerchantStatus = async () => {
@@ -57,15 +61,23 @@ export const MerchantRoute = ({ children }: ProtectedRouteProps) => {
           .eq('id', user.id)
           .single();
 
+<<<<<<< HEAD
         // Allow both merchants and admins
         setIsMerchantOrAdmin(profile?.role === 'store_owner' || profile?.role === 'admin');
+=======
+        setIsMerchant(profile?.role === 'store_owner');
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
       }
     };
 
     checkMerchantStatus();
   }, [user]);
 
+<<<<<<< HEAD
   if (loading || isMerchantOrAdmin === null) {
+=======
+  if (loading || isMerchant === null) {
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-beauty-purple"></div>
@@ -73,9 +85,15 @@ export const MerchantRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
+<<<<<<< HEAD
   if (!user || !isMerchantOrAdmin) {
     toast.error("You don't have merchant privileges");
     return <Navigate to="/merchant/login" />;
+=======
+  if (!user || !isMerchant) {
+    toast.error("You don't have merchant privileges");
+    return <Navigate to="/merchant-auth" />;
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
   }
 
   return <>{children}</>;
@@ -83,7 +101,11 @@ export const MerchantRoute = ({ children }: ProtectedRouteProps) => {
 
 export const DriverRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
+<<<<<<< HEAD
   const [isDriverOrAdmin, setIsDriverOrAdmin] = useState<boolean | null>(null);
+=======
+  const [isDriver, setIsDriver] = useState<boolean | null>(null);
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,11 +118,18 @@ export const DriverRoute = ({ children }: ProtectedRouteProps) => {
           .eq('id', user.id)
           .single();
 
+<<<<<<< HEAD
         // Allow both drivers and admins
         setIsDriverOrAdmin(profile?.role === 'driver' || profile?.role === 'admin');
 
         // If not a driver or admin, check application status
         if (profile?.role !== 'driver' && profile?.role !== 'admin') {
+=======
+        setIsDriver(profile?.role === 'driver');
+
+        // If not a driver, check application status
+        if (profile?.role !== 'driver') {
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
           const { data: application } = await supabase
             .from('driver_applications')
             .select('status')
@@ -115,7 +144,11 @@ export const DriverRoute = ({ children }: ProtectedRouteProps) => {
     checkDriverStatus();
   }, [user]);
 
+<<<<<<< HEAD
   if (loading || isDriverOrAdmin === null) {
+=======
+  if (loading || isDriver === null) {
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -124,10 +157,17 @@ export const DriverRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!user) {
+<<<<<<< HEAD
     return <Navigate to="/driver/login" />;
   }
 
   if (!isDriverOrAdmin) {
+=======
+    return <Navigate to="/driver-auth" />;
+  }
+
+  if (!isDriver) {
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
     switch (applicationStatus) {
       case 'pending':
         toast.info("Your application is pending review. We'll notify you once it's approved.");
@@ -145,7 +185,11 @@ export const DriverRoute = ({ children }: ProtectedRouteProps) => {
         toast.error("You don't have driver privileges");
         break;
     }
+<<<<<<< HEAD
     return <Navigate to="/driver/login" />;
+=======
+    return <Navigate to="/driver-auth" />;
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
   }
 
   return <>{children}</>;

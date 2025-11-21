@@ -28,7 +28,11 @@ import {
 } from 'lucide-react';
 
 const MerchantDashboard = () => {
+<<<<<<< HEAD
   const { user, userStore, loading, profile } = useAuth();
+=======
+  const { user, userStore, loading } = useAuth();
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -44,6 +48,7 @@ const MerchantDashboard = () => {
 
   useEffect(() => {
     if (!loading && !userStore) {
+<<<<<<< HEAD
       // Don't redirect admins to setup - they can view the dashboard without a store
       if (profile?.role !== 'admin') {
         navigate('/merchant/setup');
@@ -52,6 +57,13 @@ const MerchantDashboard = () => {
       fetchDashboardStats();
     }
   }, [loading, userStore, navigate, profile]);
+=======
+      navigate('/merchant/setup');
+    } else if (userStore) {
+      fetchDashboardStats();
+    }
+  }, [loading, userStore, navigate]);
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
 
   const fetchDashboardStats = async () => {
     if (!userStore) return;
@@ -122,7 +134,11 @@ const MerchantDashboard = () => {
     }
   };
 
+<<<<<<< HEAD
   if (loading) {
+=======
+  if (loading || !userStore) {
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-beauty-purple"></div>
@@ -130,18 +146,26 @@ const MerchantDashboard = () => {
     );
   }
 
+<<<<<<< HEAD
   // Admin viewing without a store
   const isAdminWithoutStore = profile?.role === 'admin' && !userStore;
 
+=======
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
   return (
     <MerchantRoute>
       <div className="flex flex-col min-h-screen">
         <MerchantHeader />
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
         <main className="flex-grow bg-gray-50">
           <div className="container mx-auto px-4 py-8">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
+<<<<<<< HEAD
                 {isAdminWithoutStore
                   ? "Merchant Dashboard (Admin View)"
                   : `Welcome back, ${userStore?.name || 'Merchant'}!`
@@ -153,6 +177,11 @@ const MerchantDashboard = () => {
                   : "Manage your store and track your business performance"
                 }
               </p>
+=======
+                Welcome back, {userStore.name}!
+              </h1>
+              <p className="text-gray-600">Manage your store and track your business performance</p>
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
             </div>
 
             <Tabs defaultValue="overview" className="space-y-6">

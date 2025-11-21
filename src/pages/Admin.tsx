@@ -19,7 +19,10 @@ import { AdminDrivers } from "@/components/admin/AdminDrivers";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
 import { AdminCustomization } from "@/components/admin/AdminCustomization";
+<<<<<<< HEAD
 import { EnhancedCustomization } from "@/components/admin/EnhancedCustomization";
+=======
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
 import { Store, Package, ShoppingCart, Users, LogOut, Shield, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -281,7 +284,11 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="customization">
+<<<<<<< HEAD
             <EnhancedCustomization />
+=======
+            <AdminCustomization />
+>>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
           </TabsContent>
 
           <TabsContent value="approvals">
