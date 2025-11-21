@@ -49,7 +49,6 @@ const MerchantAuth = () => {
           .select("role")
           .eq("id", session.user.id)
           .single();
-<<<<<<< HEAD
 
         // Redirect merchants and admins to merchant dashboard
         if (profile?.role === "store_owner" || profile?.role === "admin") {
@@ -57,17 +56,6 @@ const MerchantAuth = () => {
         }
         // If driver is already logged in, don't redirect
         // They should use their own portal
-=======
-        
-        // Redirect based on role
-        if (profile?.role === "admin") {
-          navigate("/admin");
-        } else if (profile?.role === "store_owner") {
-          navigate("/merchant");
-        } else {
-          navigate("/");
-        }
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
       }
     };
 
@@ -110,11 +98,7 @@ const MerchantAuth = () => {
           return;
         }
 
-<<<<<<< HEAD
         // Redirect based on role - allow merchants and admins
-=======
-        // Redirect based on role
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
         if (profile?.role === "store_owner") {
           toast({
             title: "Welcome back!",
@@ -122,7 +106,6 @@ const MerchantAuth = () => {
           });
           navigate("/merchant");
         } else if (profile?.role === "admin") {
-<<<<<<< HEAD
           // Allow admin to access merchant portal
           toast({
             title: "Admin Access",
@@ -136,9 +119,6 @@ const MerchantAuth = () => {
             variant: "destructive",
           });
           await supabase.auth.signOut();
-=======
-          navigate("/admin");
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
         } else {
           toast({
             title: "Access Denied",

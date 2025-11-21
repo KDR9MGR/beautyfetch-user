@@ -27,21 +27,12 @@ const DriverAuth = () => {
           .eq('id', session.user.id)
           .single();
 
-<<<<<<< HEAD
         // Redirect drivers and admins to driver dashboard
         if (profile?.role === 'driver' || profile?.role === 'admin') {
           navigate('/driver');
         }
         // If merchant is already logged in, don't redirect
         // They should use their own portal
-=======
-        // Redirect based on role
-        if (profile?.role === 'driver') {
-          navigate('/driver');
-        } else {
-          navigate('/');
-        }
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
       }
     };
 
@@ -50,11 +41,7 @@ const DriverAuth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
     try {
       setLoading(true);
 
@@ -66,7 +53,6 @@ const DriverAuth = () => {
 
       if (authError) throw authError;
 
-<<<<<<< HEAD
       // 2. Check if user already has driver or admin role
       const { data: profile } = await supabase
         .from('profiles')
@@ -96,9 +82,6 @@ const DriverAuth = () => {
       }
 
       // 3. For non-driver users, check application status
-=======
-      // 2. Check application status
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
       const { data: application, error: applicationError } = await supabase
         .from('driver_applications')
         .select('status')
@@ -141,7 +124,6 @@ const DriverAuth = () => {
           break;
 
         case 'approved':
-<<<<<<< HEAD
           // Application approved - update profile role to driver
           await supabase
             .from('profiles')
@@ -149,28 +131,6 @@ const DriverAuth = () => {
             .eq('id', authData.user!.id);
 
           toast.success("Welcome! Your application has been approved. You're now logged in.");
-=======
-          // Check if driver profile exists
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', authData.user!.id)
-            .single();
-
-          if (profile?.role !== 'driver') {
-            // Update profile role to driver
-            await supabase
-              .from('profiles')
-              .update({ role: 'driver' })
-              .eq('id', authData.user!.id);
-          }
-
-          // Create driver status if it doesn't exist
-          // Note: driver_status table doesn't exist in schema
-          console.log('Driver logged in successfully');
-
-          toast.success("Welcome back! You're now logged in.");
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
           navigate('/driver');
           break;
 

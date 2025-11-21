@@ -6,10 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { LocationProvider } from "@/contexts/LocationContext";
-<<<<<<< HEAD
 import { CustomizationProvider } from "@/contexts/CustomizationContext";
-=======
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
 import { LocationPermissionModal } from "@/components/LocationPermissionModal";
 import { useLocation } from "@/contexts/LocationContext";
 import Index from "./pages/Index";
@@ -57,7 +54,6 @@ const LocationModalWrapper = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-<<<<<<< HEAD
     <CustomizationProvider>
       <AuthProvider>
         <CartProvider>
@@ -67,16 +63,6 @@ const App = () => (
               <Sonner richColors closeButton />
               <LocationModalWrapper />
               <BrowserRouter>
-=======
-    <AuthProvider>
-      <CartProvider>
-        <LocationProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner richColors closeButton />
-            <LocationModalWrapper />
-            <BrowserRouter>
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/stores" element={<Stores />} />
@@ -95,11 +81,7 @@ const App = () => (
                 <Route path="/driver/login" element={<DriverAuth />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/merchant" element={<MerchantDashboard />} />
-<<<<<<< HEAD
                 <Route path="/driver" element={<DriverDashboard />} />
-=======
-                <Route path="/driver-dashboard" element={<DriverDashboard />} />
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
                 <Route path="/merchant-signup" element={<MerchantSignup />} />
                 <Route path="/driver-signup" element={<DriverSignup />} />
               <Route path="/profile" element={<Profile />} />
@@ -115,10 +97,7 @@ const App = () => (
         </LocationProvider>
       </CartProvider>
     </AuthProvider>
-<<<<<<< HEAD
     </CustomizationProvider>
-=======
->>>>>>> 67524c0aa4bdea311a366d0136d07e8bd11e7aa1
   </QueryClientProvider>
 );
 
