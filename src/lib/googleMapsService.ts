@@ -310,6 +310,10 @@ export function calculateDeliveryFeeWithSettings(distance: number, settings: Del
   return fee;
 }
 
+export function calculateDeliveryFee(distance: number, settings: DeliveryFeeSettings = getDefaultDeliveryFeeSettings()): number {
+  return calculateDeliveryFeeWithSettings(distance, settings);
+}
+
 export const getDefaultDeliveryFeeSettings = (): DeliveryFeeSettings => ({
   baseFee: 3.99,
   perMileRate: 1.5,

@@ -18,7 +18,6 @@ ALTER TABLE public.order_status_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_analytics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.store_analytics_summary ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_commissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_hours ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_managers ENABLE ROW LEVEL SECURITY;
@@ -71,9 +70,6 @@ CREATE POLICY "Admins only - order_status_history" ON public.order_status_histor
 FOR ALL USING (is_admin(auth.uid()));
 
 CREATE POLICY "Admins only - store_analytics" ON public.store_analytics
-FOR ALL USING (is_admin(auth.uid()));
-
-CREATE POLICY "Admins only - store_analytics_summary" ON public.store_analytics_summary
 FOR ALL USING (is_admin(auth.uid()));
 
 CREATE POLICY "Admins only - store_commissions" ON public.store_commissions
