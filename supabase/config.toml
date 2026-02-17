@@ -1,0 +1,4 @@
+project_id = "ysmzgrtfxbtqkaeltoug"
+
+[functions.stripe-payment]
+verify_jwt = true
