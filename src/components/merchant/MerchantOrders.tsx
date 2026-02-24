@@ -17,6 +17,21 @@ export const MerchantOrders = () => {
     }
   }, [userStore]);
 
+  useEffect(() => {
+    if (!userStore) return;
+    const channel = supabase
+      .channel(`merchant_orders_${userStore.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_items', filter: `store_id=eq.${userStore.id}` },
+        () => fetchOrders()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userStore]);
+
   const fetchOrders = async () => {
     if (!userStore) return;
 
