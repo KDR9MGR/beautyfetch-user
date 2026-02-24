@@ -125,6 +125,33 @@ serve(async (req) => {
       throw new Error(itemsError.message || 'Failed to create order items');
     }
 
+    const storeTotals = orderItems.reduce<Record<string, number>>((acc, item) => {
+      acc[item.store_id] = (acc[item.store_id] || 0) + Number(item.total || 0);
+      return acc;
+    }, {});
+    const storeIds = Object.keys(storeTotals);
+    if (storeIds.length > 0) {
+      const { data: stores } = await supabaseAdmin
+        .from('stores')
+        .select('id, commission_rate')
+        .in('id', storeIds);
+      const commissionRecords = (stores || []).map((store) => {
+        const rate = Number(store.commission_rate || 0);
+        const storeTotal = storeTotals[store.id] || 0;
+        return {
+          store_id: store.id,
+          order_id: order.id,
+          commission_rate: rate,
+          commission_amount: (storeTotal * rate) / 100,
+          calculated_at: now,
+          payment_status: 'pending'
+        };
+      });
+      if (commissionRecords.length > 0) {
+        await supabaseAdmin.from('commission_tracking').insert(commissionRecords);
+      }
+    }
+
     await supabaseAdmin.from('order_status_history').insert({
       order_id: order.id,
       old_status: null,

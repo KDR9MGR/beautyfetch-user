@@ -105,6 +105,11 @@ serve(async (req) => {
     }
 
     await supabaseAdmin
+      .from('drivers')
+      .update({ status: 'busy', updated_at: now })
+      .eq('profile_id', selectedDriver.driver_id);
+
+    await supabaseAdmin
       .from('orders')
       .update({ status: 'driver_assigned', updated_at: now })
       .eq('id', orderId);
