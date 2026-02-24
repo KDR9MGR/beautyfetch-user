@@ -43,23 +43,30 @@ export const ActiveDeliveries = () => {
     };
   }, [user]);
 
-  const updateDeliveryStatus = async (deliveryId: string, status: string, notes?: string) => {
-    const supabaseAny = supabase as any;
-    const updates: any = { status };
-    if (status === 'delivered') {
-      updates.actual_delivery_time = new Date().toISOString();
+  const updateDeliveryStatus = async (
+    deliveryId: string,
+    orderId: string | null,
+    deliveryStatus: string,
+    orderStatus: string,
+    notes?: string
+  ) => {
+    if (!orderId) {
+      toast.error('Order not found for delivery');
+      return;
     }
-    const { error } = await supabaseAny.from('deliveries').update(updates).eq('id', deliveryId);
-    if (error) {
+    const { data, error } = await supabase.functions.invoke('update-order-status', {
+      body: {
+        orderId,
+        status: orderStatus,
+        deliveryId,
+        deliveryStatus,
+        reason: notes
+      }
+    });
+    if (error || !data?.success) {
       toast.error('Failed to update delivery status');
       return;
     }
-    await supabaseAny.from('delivery_tracking').insert({
-      delivery_id: deliveryId,
-      status,
-      location: {},
-      notes,
-    });
     toast.success('Delivery updated');
     fetchDeliveries();
   };
@@ -122,21 +129,67 @@ export const ActiveDeliveries = () => {
                 <div className="flex gap-2">
                   {delivery.status === 'assigned' && (
                     <>
-                      <Button size="sm" className="flex-1" onClick={() => updateDeliveryStatus(delivery.id, 'picked_up')}>
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() =>
+                          updateDeliveryStatus(
+                            delivery.id,
+                            delivery.order?.id ?? null,
+                            'picked_up',
+                            'picked_up'
+                          )
+                        }
+                      >
                         Accept Pickup
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => updateDeliveryStatus(delivery.id, 'failed', 'Driver rejected')}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() =>
+                          updateDeliveryStatus(
+                            delivery.id,
+                            delivery.order?.id ?? null,
+                            'failed',
+                            'failed',
+                            'Driver rejected'
+                          )
+                        }
+                      >
                         Reject
                       </Button>
                     </>
                   )}
                   {delivery.status === 'picked_up' && (
-                    <Button size="sm" className="flex-1" onClick={() => updateDeliveryStatus(delivery.id, 'in_transit')}>
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() =>
+                        updateDeliveryStatus(
+                          delivery.id,
+                          delivery.order?.id ?? null,
+                          'in_transit',
+                          'out_for_delivery'
+                        )
+                      }
+                    >
                       Start Delivery
                     </Button>
                   )}
                   {delivery.status === 'in_transit' && (
-                    <Button size="sm" className="flex-1" onClick={() => updateDeliveryStatus(delivery.id, 'delivered')}>
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() =>
+                        updateDeliveryStatus(
+                          delivery.id,
+                          delivery.order?.id ?? null,
+                          'delivered',
+                          'delivered'
+                        )
+                      }
+                    >
                       Complete Delivery
                     </Button>
                   )}

@@ -18,7 +18,7 @@ import { StripeProvider } from '@/components/payment/StripeProvider';
 import { EnhancedPaymentForm } from '@/components/payment/EnhancedPaymentForm';
 import { validateCartBeforeCheckout, preventDuplicateOrder } from '@/utils/cartValidation';
 import { validateServiceability } from '@/utils/serviceability';
-import { verifyPaymentServerSide, createOrderWithPayment } from '@/utils/paymentSecurity';
+import { createOrderWithPayment } from '@/utils/paymentSecurity';
 import { validateStockAvailability } from '@/utils/stockValidation';
 import { setupSessionMonitoring } from '@/utils/sessionSecurity';
 import { supabase } from '@/integrations/supabase/client.ts';
@@ -339,18 +339,6 @@ const SecureCheckout = () => {
       if (!duplicateCheck.allowed) {
         toast.error(duplicateCheck.reason || 'Duplicate order detected');
         return;
-      }
-
-      if (paymentMethod === 'stripe') {
-        const paymentVerification = await verifyPaymentServerSide(
-          paymentIntentId || '',
-          Math.round(state.total * 100),
-          'pending'
-        );
-        if (!paymentVerification.success) {
-          toast.error(paymentVerification.error || 'Payment verification failed');
-          return;
-        }
       }
 
       // Create order with payment

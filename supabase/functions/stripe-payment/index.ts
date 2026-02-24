@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, currency = 'usd', customerEmail, metadata = {} } = await req.json();
+    const { amount, currency = 'usd', customerEmail, metadata = {}, orderId } = await req.json();
 
     // Validate required fields
     if (!amount || amount <= 0) {
@@ -40,6 +40,7 @@ serve(async (req) => {
       receipt_email: customerEmail || undefined,
       metadata: {
         ...metadata,
+        ...(orderId ? { orderId } : {}),
         created_via: 'supabase_function'
       },
       automatic_payment_methods: {

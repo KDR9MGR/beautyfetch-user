@@ -21,19 +21,32 @@ import {
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { FeedbackModal } from '@/components/FeedbackModal';
+import { supabase } from '@/integrations/supabase/client.ts';
 
 interface OrderData {
+  id: string;
   orderNumber: string;
   email: string;
-  items: any[];
-  address: any;
+  status: string;
+  items: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    total: number;
+  }>;
+  address: {
+    address_line_1?: string;
+    address_line_2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  } | null;
   subtotal: number;
   tax: number;
   shipping: number;
-  tip: number;
   total: number;
-  createAccount: boolean;
-  timestamp: string;
+  createdAt: string;
 }
 
 const TrackOrder = () => {
@@ -62,6 +75,22 @@ const TrackOrder = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (!foundOrder?.id) return;
+    const channel = supabase
+      .channel(`order_tracking_${foundOrder.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${foundOrder.id}` },
+        () => handleSearch(foundOrder.email, foundOrder.orderNumber)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [foundOrder?.id, foundOrder?.email, foundOrder?.orderNumber]);
+
   const handleSearch = async (searchEmail?: string, searchOrderNumber?: string) => {
     const emailToSearch = searchEmail || email;
     const orderToSearch = searchOrderNumber || orderNumber;
@@ -75,23 +104,84 @@ const TrackOrder = () => {
     setHasSearched(true);
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Search in localStorage for guest orders
-      const guestOrders = JSON.parse(localStorage.getItem('guestOrders') || '[]');
-      const order = guestOrders.find((o: OrderData) => 
-        o.email.toLowerCase() === emailToSearch.toLowerCase() && 
-        o.orderNumber === orderToSearch
-      );
-      
-      if (order) {
-        setFoundOrder(order);
-        toast.success('Order found!');
-      } else {
-        setFoundOrder(null);
-        toast.error('Order not found. Please check your email and order number.');
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          status,
+          subtotal,
+          tax_amount,
+          shipping_amount,
+          total_amount,
+          shipping_address,
+          created_at,
+          profiles!orders_customer_id_fkey(email),
+          order_items(
+            id,
+            quantity,
+            total,
+            products(name)
+          )
+        `)
+        .eq('order_number', orderToSearch)
+        .eq('profiles.email', emailToSearch)
+        .maybeSingle();
+
+      if (error || !data) {
+        const guestOrders = JSON.parse(localStorage.getItem('guestOrders') || '[]');
+        const order = guestOrders.find((o: any) => 
+          o.email?.toLowerCase() === emailToSearch.toLowerCase() && 
+          o.orderNumber === orderToSearch
+        );
+        if (order) {
+          setFoundOrder({
+            id: order.orderNumber,
+            orderNumber: order.orderNumber,
+            email: order.email,
+            status: 'processing',
+            items: order.items.map((item: any) => ({
+              id: item.id,
+              name: item.product?.name || 'Item',
+              quantity: item.quantity,
+              total: item.quantity * (item.variant?.price || item.product?.price || 0)
+            })),
+            address: order.address,
+            subtotal: order.subtotal,
+            tax: order.tax,
+            shipping: order.shipping,
+            total: order.total,
+            createdAt: order.timestamp
+          });
+          toast.success('Order found!');
+        } else {
+          setFoundOrder(null);
+          toast.error('Order not found. Please check your email and order number.');
+        }
+        return;
       }
+
+      const orderItems = (data.order_items || []).map((item: any) => ({
+        id: item.id,
+        name: item.products?.name || 'Item',
+        quantity: item.quantity,
+        total: item.total
+      }));
+
+      setFoundOrder({
+        id: data.id,
+        orderNumber: data.order_number,
+        email: data.profiles?.email || emailToSearch,
+        status: data.status || 'processing',
+        items: orderItems,
+        address: data.shipping_address || null,
+        subtotal: Number(data.subtotal || 0),
+        tax: Number(data.tax_amount || 0),
+        shipping: Number(data.shipping_amount || 0),
+        total: Number(data.total_amount || 0),
+        createdAt: data.created_at
+      });
+      toast.success('Order found!');
     } catch (error) {
       toast.error('Failed to search for order. Please try again.');
     } finally {
@@ -99,15 +189,28 @@ const TrackOrder = () => {
     }
   };
 
-  const getOrderStatus = (timestamp: string) => {
-    const orderDate = new Date(timestamp);
-    const now = new Date();
-    const daysSinceOrder = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysSinceOrder < 1) return { status: 'processing', step: 1 };
-    if (daysSinceOrder < 2) return { status: 'shipped', step: 2 };
-    if (daysSinceOrder < 4) return { status: 'delivered', step: 3 };
-    return { status: 'delivered', step: 3 };
+  const getOrderStatus = (status: string) => {
+    switch (status) {
+      case 'created':
+      case 'payment_pending':
+      case 'payment_success':
+      case 'pending':
+      case 'confirmed':
+        return { status: 'processing', step: 1 };
+      case 'merchant_accepted':
+      case 'driver_assigned':
+      case 'picked_up':
+      case 'out_for_delivery':
+      case 'shipped':
+        return { status: 'shipped', step: 2 };
+      case 'delivered':
+        return { status: 'delivered', step: 3 };
+      case 'cancelled':
+      case 'failed':
+        return { status: status, step: 0 };
+      default:
+        return { status: status || 'processing', step: 1 };
+    }
   };
 
   const getEstimatedDelivery = (timestamp: string) => {

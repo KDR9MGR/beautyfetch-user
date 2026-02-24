@@ -64,13 +64,52 @@ export const MerchantOrders = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed': return 'bg-blue-100 text-blue-800';
-      case 'processing': return 'bg-purple-100 text-purple-800';
-      case 'shipped': return 'bg-green-100 text-green-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'created':
+      case 'payment_pending':
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'payment_success':
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800';
+      case 'merchant_accepted':
+      case 'processing':
+        return 'bg-purple-100 text-purple-800';
+      case 'driver_assigned':
+      case 'picked_up':
+      case 'out_for_delivery':
+      case 'shipped':
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      case 'failed':
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, status: string, reason?: string, autoAssign?: boolean) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('update-order-status', {
+        body: {
+          orderId,
+          status,
+          reason
+        }
+      });
+      if (error || !data?.success) {
+        throw new Error(error?.message || data?.error || 'Failed to update order');
+      }
+      if (autoAssign) {
+        const { data: assignData, error: assignError } = await supabase.functions.invoke('assign-driver', {
+          body: { orderId }
+        });
+        if (assignError || assignData?.error) {
+          console.error('Driver assignment error:', assignError || assignData?.error);
+        }
+      }
+      await fetchOrders();
+    } catch (error) {
+      console.error('Order status update error:', error);
     }
   };
 
@@ -144,13 +183,22 @@ export const MerchantOrders = () => {
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
                       </Button>
-                      {order.status === 'pending' && (
+                      {['pending', 'payment_success', 'confirmed'].includes(order.status) && (
                         <>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => updateOrderStatus(order.id, 'merchant_accepted', undefined, true)}
+                          >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Accept
                           </Button>
-                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => updateOrderStatus(order.id, 'cancelled', 'Merchant declined')}
+                          >
                             <XCircle className="h-4 w-4 mr-2" />
                             Decline
                           </Button>
